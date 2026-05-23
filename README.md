@@ -48,6 +48,37 @@ http://localhost:3000/admin
 
 ## Cloud Deployment
 
+### Netlify Free Deployment
+
+Netlify is the recommended free deployment option for this demo.
+
+1. Import the GitHub repo into Netlify.
+2. Use these settings:
+
+```txt
+Build command: npm install
+Publish directory: public
+Functions directory: netlify/functions
+```
+
+3. Add this environment variable:
+
+```txt
+TOKEN_SECRET=replace-with-a-long-random-secret
+```
+
+The included `netlify.toml` routes the Express backend through a Netlify Function, so these paths work after deployment:
+
+```txt
+/
+/admin
+/api/*
+```
+
+Important: Netlify Functions do not provide durable local disk storage. The current JSON database is demo-only on Netlify. Move persistence to PostgreSQL or Supabase before using the system with real users.
+
+### Render Deployment
+
 This repo includes `render.yaml` for Render. Create a new Render Blueprint from the GitHub repository, or create a Web Service manually:
 
 - Build command: `npm install`

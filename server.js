@@ -12,7 +12,8 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DB_PATH = path.join(__dirname, 'data', 'wbv-db.json');
+const DB_PATH = process.env.DB_PATH || ((process.env.VERCEL || process.env.NETLIFY) ? path.join('/tmp', 'wbv-db.json') : path.join(__dirname, 'data', 'wbv-db.json'));
+const TOKEN_SECRET = process.env.TOKEN_SECRET || 'wellbodyvital-local-demo-secret';
 const sessions = new Map();
 
 app.use(express.json({ limit: '10mb' }));
@@ -62,6 +63,25 @@ function publicUser(user) {
   return safe;
 }
 
+function signToken(userId) {
+  const payload = Buffer.from(JSON.stringify({ userId, createdAt: now() })).toString('base64url');
+  const signature = crypto.createHmac('sha256', TOKEN_SECRET).update(payload).digest('base64url');
+  return `wbv_${payload}.${signature}`;
+}
+
+function verifyToken(token) {
+  if (!token?.startsWith('wbv_')) return null;
+  const [payload, signature] = token.slice(4).split('.');
+  if (!payload || !signature) return null;
+  const expected = crypto.createHmac('sha256', TOKEN_SECRET).update(payload).digest('base64url');
+  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
+  try {
+    return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+  } catch (error) {
+    return null;
+  }
+}
+
 function audit(db, actor, action, entityType, entityId, details = {}) {
   db.auditLogs.unshift({
     id: id('audit'),
@@ -78,7 +98,7 @@ function audit(db, actor, action, entityType, entityId, details = {}) {
 
 function auth(req, res, next) {
   const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-  const session = sessions.get(token);
+  const session = sessions.get(token) || verifyToken(token);
   if (!session) return res.status(401).json({ error: 'Authentication required' });
   const db = readDb();
   const user = db.users.find((item) => item.id === session.userId && item.status !== 'disabled');
@@ -305,10 +325,12 @@ app.post('/api/auth/login', (req, res) => {
   const user = db.users.find((item) => item.email.toLowerCase() === String(req.body.email || '').toLowerCase());
   if (!user || user.password !== req.body.password) return res.status(401).json({ error: 'Invalid email or password' });
   const token = crypto.randomBytes(24).toString('hex');
+  const statelessToken = signToken(user.id);
   sessions.set(token, { userId: user.id, createdAt: now() });
+  sessions.set(statelessToken, { userId: user.id, createdAt: now() });
   audit(db, user, 'login', 'user', user.id, { ip: req.ip });
   writeDb(db);
-  res.json({ success: true, token, user: publicUser(user) });
+  res.json({ success: true, token: statelessToken, user: publicUser(user) });
 });
 
 app.post('/api/auth/logout', auth, (req, res) => {
