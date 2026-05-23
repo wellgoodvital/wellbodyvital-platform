@@ -12,7 +12,9 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DB_PATH = process.env.DB_PATH || ((process.env.VERCEL || process.env.NETLIFY) ? path.join('/tmp', 'wbv-db.json') : path.join(__dirname, 'data', 'wbv-db.json'));
+const IS_SERVERLESS = Boolean(process.env.WBV_SERVERLESS || process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const APP_ROOT = process.env.APP_ROOT || (IS_SERVERLESS ? process.cwd() : __dirname);
+const DB_PATH = process.env.DB_PATH || (IS_SERVERLESS ? path.join('/tmp', 'wbv-db.json') : path.join(APP_ROOT, 'data', 'wbv-db.json'));
 const TOKEN_SECRET = process.env.TOKEN_SECRET || 'wellbodyvital-local-demo-secret';
 const sessions = new Map();
 
@@ -28,7 +30,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.static(path.join(__dirname, 'public'), {
+app.use(express.static(path.join(APP_ROOT, 'public'), {
   maxAge: '30d',
   etag: true,
 }));
@@ -265,7 +267,7 @@ function providerDashboard(db, role, userId) {
 }
 
 app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'backoffice.html'));
+  res.sendFile(path.join(APP_ROOT, 'public', 'backoffice.html'));
 });
 
 app.post('/api/auth/register', (req, res) => {
@@ -796,7 +798,7 @@ app.post('/api/pharmacy/report', auth, (req, res) => {
 });
 
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(APP_ROOT, 'public', 'index.html'));
 });
 
 if (require.main === module) {
