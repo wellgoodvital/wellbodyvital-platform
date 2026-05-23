@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en-NG" prefix="og: https://ogp.me/ns#">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>WellBodyVital – Feel Better. Every Day. | Wellness &amp; Metabolic Health Nigeria</title>
+<meta name="description" content="WellBodyVital is Nigeria's trusted wellness infrastructure for modern metabolic health. Personalized wellness programs designed around your body, lifestyle, and goals. Doctor-guided. Science-backed. Not Once. Every Day.">
+<meta name="keywords" content="wellness platform Nigeria,metabolic health Nigeria,weight management Nigeria,healthy lifestyle Nigeria,wellbeing platform,balanced life Nigeria,weight loss Nigeria,GLP-1 Nigeria,medical weight loss Nigeria,telehealth Nigeria,feel better every day,daily wellness routine,health optimization Nigeria,personalized health plans Nigeria,holistic health Nigeria,NAFDAC pharmacy Nigeria,MDCN doctor Nigeria,BMI Nigeria,obesity treatment Nigeria,sustainable weight management,preventive health Nigeria,wellness subscription Nigeria,Nigerian health platform,metabolic reset Nigeria">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+<meta name="language" content="en-NG">
+<meta name="author" content="WellBodyVital Health Ltd">
+<meta name="geo.region" content="NG">
+<link rel="canonical" href="https://wellbodyvital.com/">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="favicon.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://wellbodyvital.com/">
+<meta property="og:site_name" content="WellBodyVital">
+<meta property="og:title" content="WellBodyVital – Feel Better. Every Day.">
+<meta property="og:description" content="Nigeria's trusted wellness infrastructure for modern metabolic health. Personalized programs designed around your body, lifestyle, and goals. Not Once. Every Day.">
+<meta property="og:image" content="https://wellbodyvital.com/logo-light.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="en_NG">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@WellBodyVital">
+<meta name="twitter:title" content="WellBodyVital – Feel Better. Every Day.">
+<meta name="twitter:description" content="Nigeria's trusted wellness platform for modern metabolic health. Not Once. Every Day.">
+<meta name="twitter:image" content="https://wellbodyvital.com/logo-light.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[{"@type":"MedicalOrganization","@id":"https://wellbodyvital.com/#org","name":"WellBodyVital","url":"https://wellbodyvital.com","logo":"https://wellbodyvital.com/logo-light.png","description":"Nigeria's trusted wellness infrastructure for modern metabolic health. Not Once. Every Day.","slogan":"Not Once. Every Day.","areaServed":{"@type":"Country","name":"Nigeria"},"medicalSpecialty":["Metabolic Health","Weight Management","General Wellness","Preventive Medicine"],"sameAs":["https://twitter.com/WellBodyVital","https://www.facebook.com/WellBodyVital","https://www.instagram.com/WellBodyVital","https://www.youtube.com/@WellBodyVital"]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What is WellBodyVital?","acceptedAnswer":{"@type":"Answer","text":"WellBodyVital is Nigeria's trusted wellness and metabolic health subscription platform providing personalized programs for weight management, metabolic health, nutrition, and balanced living through MDCN-licensed physicians."}},{"@type":"Question","name":"Is GLP-1 available in Nigeria through WellBodyVital?","acceptedAnswer":{"@type":"Answer","text":"Yes, WellBodyVital's Premium plan provides access to GLP-1 prescriptions through MDCN-licensed physicians and NAFDAC-registered pharmacies. Eligibility determined by clinical assessment."}},{"@type":"Question","name":"How much does WellBodyVital cost?","acceptedAnswer":{"@type":"Answer","text":"Plans start at NGN 15,000/month (Starter), NGN 35,000/month (Pro with doctor consultations), and NGN 65,000/month (Premium with GLP-1 access)."}}]}]}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.29.0/dist/tabler-icons.min.css">
+<style>
+/* =========================================================
+   WELLBODYVITAL v3 – Design System
+   "The trusted wellness infrastructure for modern metabolic health"
+   Not Once. Every Day.
+========================================================= */
+:root {
+  --p:    #0F766E;
+  --pd:   #0C5E58;
+  --pdk:  #0A4540;
+  --pm:   #14B8A6;
+  --pl:   #D1FAE5;
+  --ppale:#F0FDF9;
+  --pb:   #A7F3D0;
+  --coral:#FF7A59;
+  --cd:   #E8623F;
+  --cl:   #FFF3F0;
+  --cb:   #FFBFB0;
+  --navy: #0F172A;
+  --nm:   #334155;
+  --nl:   #64748B;
+  --bg:   #F8FAFC;
+  --bgc:  #FFFFFF;
+  --bga:  #F1F5F9;
+  --gray: #E5E7EB;
+  --gm:   #9CA3AF;
+  --ok:   #059669; --okl:#D1FAE5;
+  --warn: #D97706; --wl:#FEF3C7;
+  --err:  #DC2626; --el:#FEE2E2;
+  --inf:  #0369A1; --il:#E0F2FE;
+  --sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --serif:'Playfair Display', Georgia, serif;
+  --nav-h: 72px; /* bottom nav height — used for padding calc */
+  --rsm:8px; --rmd:12px; --rlg:18px; --rxl:24px;
+}
+
+/* RESET */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+body { font-family: var(--sans); background: #b2d8d4; min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; }
+
+/* APP SHELL — flex column, fills viewport */
+#app {
+  width: 100%; max-width: 430px; min-height: 100vh;
+  background: var(--bg); display: flex; flex-direction: column;
+  box-shadow: 0 0 80px rgba(0,0,0,.22);
+}
+
+/* SCREEN — scrollable flex child.
+   KEY: background matches body so flex-expansion doesn't show white gap */
+#screen {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; scroll-behavior: smooth;
+  background: var(--bg);
+}
+#screen::-webkit-scrollbar { display: none; }
+#screen { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* BOTTOM NAV — full-width, 5 equal columns, each icon+label perfectly centred */
+#bottom-nav {
+  flex-shrink: 0;
+  width: 100%;
+  height: var(--nav-h);
+  background: var(--bgc);
+  border-top: 1px solid var(--gray);
+  display: none;
+  box-shadow: 0 -2px 16px rgba(15,23,42,.07);
+}
+.nav-tabs {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  margin: 0; padding: 0;
+}
+.nav-tab {
+  flex: 1 1 0%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: color .15s;
+  -webkit-tap-highlight-color: transparent;
+  text-align: center;
+  overflow: hidden;
+}
+.nav-tab i {
+  font-size: 22px; color: var(--gm);
+  line-height: 1; display: block;
+}
+.nav-tab span {
+  font-size: 10px; font-weight: 600;
+  color: var(--gm); letter-spacing: .2px;
+  display: block; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%;
+}
+.nav-tab.active i, .nav-tab.active span { color: var(--p); }
+.ndot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--coral);
+  position: absolute; top: 8px; right: calc(50% - 16px);
+  border: 1.5px solid var(--bgc);
+}
+
+/* SCREEN BODY — padding-bottom clears the bottom nav */
+.sb { padding: 20px 20px calc(var(--nav-h) + 24px); }
+/* For screens without bottom nav, use standard padding */
+.sb-plain { padding: 20px 20px 40px; }
+
+/* TYPOGRAPHY */
+h1 { font-family: var(--serif); font-size: 30px; font-weight: 800; color: var(--navy); line-height: 1.18; }
+h2 { font-size: 20px; font-weight: 700; color: var(--navy); line-height: 1.3; }
+h3 { font-size: 15px; font-weight: 600; color: var(--navy); }
+p  { font-size: 14px; color: var(--nm); line-height: 1.65; }
+.ey  { font-size: 10px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: var(--p); }
+.cap { font-size: 11px; color: var(--nl); }
+
+/* HERO GRADIENT — single background declaration (prevents overlay bug) */
+.hg {
+  background:
+    radial-gradient(circle at 82% 12%, rgba(255,255,255,.06) 0%, transparent 44%),
+    radial-gradient(circle at 14% 88%, rgba(255,255,255,.04) 0%, transparent 38%),
+    linear-gradient(148deg, #060d10 0%, #0A4540 30%, var(--p) 65%, var(--pm) 100%);
+  /* isolation:isolate ensures children with mix-blend-mode
+     always blend against THIS gradient, not a parent context */
+  isolation: isolate;
+}
+
+/* LOGO SYSTEM
+   .logo-on-dark  — black-bg PNG on dark/gradient sections (screen blend strips black)
+   .logo-on-light — white-bg PNG on light/white sections (used directly, no blend needed)
+*/
+.logo-on-dark {
+  /* mix-blend-mode:screen makes black bg pixels transparent on any dark surface */
+  mix-blend-mode: screen;
+  display: block;
+}
+.logo-on-light {
+  /* Used directly on white/light backgrounds — no blend needed */
+  display: block;
+  /* Clip any white bg overflow on slightly off-white containers */
+  border-radius: 4px;
+}
+
+/* BUTTONS */
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; border:none; border-radius:var(--rmd); font-family:var(--sans); font-size:15px; font-weight:600; cursor:pointer; transition:all .18s; padding:0 20px; height:52px; width:100%; text-decoration:none; }
+.btn:active { transform: scale(.97); }
+.bp  { background:var(--p);     color:#fff; box-shadow:0 4px 16px rgba(15,118,110,.3); }
+.bp:hover { background:var(--pm); }
+.bc  { background:var(--coral); color:#fff; box-shadow:0 4px 16px rgba(255,122,89,.32); }
+.bc:hover { background:var(--cd); }
+.bo  { background:transparent;  color:var(--p); border:1.5px solid var(--pb); }
+.bo:hover { background:var(--pl); }
+.bgh { background:var(--pl);    color:var(--p); border:none; }
+.bgh:hover { background:var(--pb); }
+.bdr { background:var(--el);    color:var(--err); }
+.bsm { height:38px; font-size:13px; border-radius:var(--rsm); padding:0 14px; }
+.bxs { height:30px; font-size:11px; border-radius:6px; padding:0 10px; }
+
+/* INPUTS */
+.fi { margin-bottom:16px; }
+.fl { display:block; font-size:12px; font-weight:600; color:var(--nm); margin-bottom:6px; }
+.inp { width:100%; height:48px; border:1.5px solid var(--gray); border-radius:var(--rmd); padding:0 14px; font-family:var(--sans); font-size:14px; color:var(--navy); background:var(--bgc); outline:none; transition:border-color .15s,box-shadow .15s; }
+.inp:focus { border-color:var(--p); box-shadow:0 0 0 3px rgba(15,118,110,.1); }
+.inp::placeholder { color:var(--gm); }
+textarea.inp { height:auto; padding:12px 14px; resize:none; line-height:1.6; }
+select.inp { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; cursor:pointer; }
+.iw { position:relative; } .iw .inp { padding-left:44px; }
+.ii { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--gm); font-size:18px; pointer-events:none; }
+
+/* CARDS */
+.card  { background:var(--bgc); border-radius:var(--rlg); border:1px solid var(--gray); padding:18px; box-shadow:0 1px 4px rgba(15,118,110,.05); }
+.cteal { background:var(--ppale); border:1px solid var(--pb); border-radius:var(--rlg); padding:18px; }
+.ccoral{ background:var(--cl);   border:1px solid var(--cb); border-radius:var(--rlg); padding:18px; }
+.cnavy { background:var(--navy); border-radius:var(--rlg); padding:18px; }
+
+/* BADGES */
+.badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700; letter-spacing:.3px; }
+.bok  { background:var(--okl); color:var(--ok); }
+.bwarn{ background:var(--wl);  color:var(--warn); }
+.berr { background:var(--el);  color:var(--err); }
+.binf { background:var(--il);  color:var(--inf); }
+.bgray{ background:var(--bga); color:var(--nm); }
+.bcoral{background:var(--cl);  color:var(--cd); }
+.bteal{ background:var(--pl);  color:var(--pd); }
+
+/* LAYOUT */
+.g2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.g3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+.div{ height:1px; background:var(--gray); margin:16px 0; }
+.dor{ display:flex; align-items:center; gap:12px; margin:20px 0; color:var(--nl); font-size:12px; }
+.dor::before,.dor::after { content:''; flex:1; height:1px; background:var(--gray); }
+
+/* TOPBAR */
+.topbar { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; background:var(--bgc); border-bottom:1px solid var(--gray); position:sticky; top:0; z-index:40; }
+.back { width:36px; height:36px; border-radius:10px; background:var(--pl); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--p); font-size:16px; flex-shrink:0; }
+
+/* STAT */
+.stat { background:var(--bgc); border-radius:var(--rmd); border:1px solid var(--gray); padding:14px; }
+.sv { font-size:24px; font-weight:800; color:var(--navy); line-height:1.1; }
+.sl { font-size:11px; color:var(--nl); font-weight:500; margin-bottom:4px; }
+.sc { font-size:11px; font-weight:600; margin-top:4px; }
+.up { color:var(--ok); } .dn { color:var(--err); }
+
+/* PLAN */
+.plan { border:2px solid var(--gray); border-radius:var(--rxl); padding:20px; cursor:pointer; transition:all .2s; position:relative; overflow:hidden; background:var(--bgc); }
+.plan.sel  { border-color:var(--p); box-shadow:0 0 0 4px rgba(15,118,110,.08); }
+.plan.prem { border-color:var(--coral); }
+.plan.prem.sel { box-shadow:0 0 0 4px rgba(255,122,89,.10); }
+.prib { position:absolute; top:0; right:0; color:#fff; font-size:9px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; padding:5px 14px; border-radius:0 var(--rxl) 0 12px; }
+
+/* CHAT */
+.bub { max-width:82%; padding:10px 14px; border-radius:16px; font-size:13px; line-height:1.55; }
+.bin  { background:var(--pl); color:var(--navy); border-bottom-left-radius:4px; align-self:flex-start; }
+.bout { background:var(--p);  color:#fff; border-bottom-right-radius:4px; align-self:flex-end; }
+
+/* TIMELINE */
+.tl { display:flex; flex-direction:column; }
+.tli { display:flex; gap:12px; padding-bottom:20px; position:relative; }
+.tli:not(:last-child)::before { content:''; position:absolute; left:11px; top:26px; bottom:0; width:2px; background:var(--gray); }
+.tld { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#fff; flex-shrink:0; }
+
+/* TOGGLE */
+.togrow { display:flex; background:var(--bga); border-radius:10px; padding:3px; gap:3px; margin-bottom:20px; }
+.togb   { flex:1; padding:9px; border:none; background:transparent; border-radius:8px; font-family:var(--sans); font-size:13px; font-weight:600; color:var(--nl); cursor:pointer; transition:all .2s; }
+.togb.on { background:var(--bgc); color:var(--p); box-shadow:0 1px 6px rgba(0,0,0,.08); }
+
+/* STEP SEGMENTS */
+.sbar { display:flex; gap:4px; margin-bottom:20px; }
+.sseg { flex:1; height:4px; border-radius:2px; background:var(--gray); transition:background .35s; }
+.sseg.done { background:var(--p); }
+
+/* PROGRESS */
+.prog { height:6px; background:var(--gray); border-radius:3px; overflow:hidden; }
+.pf   { height:100%; background:var(--p); border-radius:3px; transition:width .5s; }
+.plg  { height:10px; border-radius:5px; }
+
+/* NOTICE */
+.note { border-radius:var(--rmd); padding:14px; display:flex; gap:10px; align-items:flex-start; }
+.ny { background:#FFFBEB; border:1px solid #FDE68A; }
+.nt { background:var(--ppale); border:1px solid var(--pb); }
+.nr { background:var(--el); border:1px solid #FECACA; }
+
+/* PAY TILE */
+.ptile { border:1.5px solid var(--gray); border-radius:var(--rmd); padding:12px; cursor:pointer; display:flex; align-items:center; gap:10px; background:var(--bgc); transition:all .2s; }
+.ptile.on { border-color:var(--p); background:var(--ppale); }
+
+/* RADIO */
+.ropt { display:flex; align-items:flex-start; gap:10px; padding:12px; background:var(--bga); border:1.5px solid var(--gray); border-radius:var(--rmd); cursor:pointer; margin-bottom:8px; }
+.ropt:has(input:checked) { border-color:var(--p); background:var(--ppale); }
+input[type=checkbox],input[type=radio] { accent-color:var(--p); margin-top:2px; flex-shrink:0; }
+
+/* FEAT CHECK */
+.fc { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.fc i { font-size:14px; flex-shrink:0; }
+
+/* UPLOAD */
+.upz { border:2px dashed var(--gm); border-radius:var(--rmd); padding:24px; text-align:center; cursor:pointer; transition:border-color .2s; }
+.upz:hover { border-color:var(--p); }
+
+/* OVERLAY / MODAL */
+.overlay { position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:200; display:flex; align-items:flex-end; justify-content:center; animation:fadeUp .2s ease; }
+.sheet { background:var(--bgc); border-radius:24px 24px 0 0; padding:24px 20px 36px; width:100%; max-width:430px; max-height:88vh; overflow-y:auto; }
+.sheet::-webkit-scrollbar { display:none; }
+.handle { width:40px; height:4px; background:var(--gray); border-radius:2px; margin:0 auto 20px; }
+
+/* SITE FOOTER */
+.site-footer {
+  background: var(--navy); padding: 28px 20px 24px; text-align: center;
+}
+.site-footer-links { display:flex; justify-content:center; flex-wrap:wrap; gap:14px; margin:16px 0; }
+.site-footer-links a { font-size:11px; color:rgba(255,255,255,.5); text-decoration:none; font-weight:500; transition:color .15s; }
+.site-footer-links a:hover { color:var(--pm); }
+
+/* ANIMATIONS */
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+.fu{animation:fadeUp .32s ease both}
+.a1{animation-delay:.07s} .a2{animation-delay:.14s} .a3{animation-delay:.21s} .a4{animation-delay:.28s}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="screen"></div>
+  <nav id="bottom-nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="go('dashboard')" id="nt-home" aria-label="Home">
+        <i class="ti ti-layout-dashboard" aria-hidden="true"></i><span>Home</span>
+      </button>
+      <button class="nav-tab" onclick="go('progress')" id="nt-prog" aria-label="Progress">
+        <i class="ti ti-trending-down" aria-hidden="true"></i><span>Progress</span>
+      </button>
+      <button class="nav-tab" onclick="go('doctor')" id="nt-doc" aria-label="Doctor">
+        <i class="ti ti-stethoscope" aria-hidden="true"></i><span>Doctor</span>
+      </button>
+      <button class="nav-tab" onclick="go('pharmacy')" id="nt-pharm" aria-label="Pharmacy">
+        <i class="ti ti-pill" aria-hidden="true"></i><span>Pharmacy</span>
+      </button>
+      <button class="nav-tab" onclick="go('profile')" id="nt-prof" aria-label="Profile" style="position:relative">
+        <i class="ti ti-user-circle" aria-hidden="true"></i><span>Profile</span>
+        <div class="ndot" aria-hidden="true"></div>
+      </button>
+    </div>
+  </nav>
+</div>
+<script>
+/* ==========================================================
+   WELLBODYVITAL — App State & Router   Not Once. Every Day.
+========================================================== */
+const S = {
+  screen:'landing', plan:'pro', step:0, qStep:0, payMethod:'card', modal:null,
+  chat:[
+    {from:'doc', text:'Hello Amara! I reviewed your wellness intake. Your metabolic profile shows great potential. Welcome to WellBodyVital — we are glad you are here!', time:'10:32 AM'},
+    {from:'doc', text:'Before we proceed, could you share your most recent blood pressure readings and fasting glucose if available?', time:'10:34 AM'}
+  ]
+};
+const WITH_NAV = ['dashboard','progress','doctor','pharmacy','profile','notifications'];
+
+function setState(u){ Object.assign(S,u); render(); }
+
+/* BUG FIX: always reset modal on navigation */
+function go(s, extra={}){
+  setState({screen:s, modal:null, ...extra});
+  const nav = document.getElementById('bottom-nav');
+  nav.style.display = WITH_NAV.includes(s) ? 'flex' : 'none';
+  ['home','prog','doc','pharm','prof'].forEach(id=>document.getElementById('nt-'+id)?.classList.remove('active'));
+  const m = {dashboard:'home',progress:'prog',doctor:'doc',pharmacy:'pharm',profile:'prof'};
+  if(m[s]) document.getElementById('nt-'+m[s])?.classList.add('active');
+  document.getElementById('screen')?.scrollTo(0,0);
+}
+
+/* ==========================================================
+   LOGO COMPONENTS
+   logo-dark.png  = full logo on BLACK bg → mix-blend-mode:screen strips black → for dark hero sections
+   logo-light.png = full logo on WHITE bg → used directly, no blend → for light/white sections
+   favicon.png    = W mark on WHITE bg → browser favicon + small icon uses
+========================================================== */
+/* ALL DARK SECTION logos — Landing, Auth, Plans, Profile hero, Site footer.
+   mix-blend-mode:screen makes the black background pixels transparent,
+   revealing the gradient behind while the logo mark shows cleanly. */
+function LogoOnDark(h=52){
+  return `<img src="logo-dark.png" alt="WellBodyVital – Not Once. Every Day." class="logo-on-dark" style="height:${h}px;width:auto">`;
+}
+
+/* WHITE/LIGHT SECTION logo (Onboarding topbar). No blending needed. */
+function LogoOnLight(h=44){
+  return `<img src="logo-light.png" alt="WellBodyVital – Not Once. Every Day." class="logo-on-light" style="height:${h}px;width:auto">`;
+}
+
+function TopBar(title, back=null){
+  return `<div class="topbar">
+    ${back ? `<button class="back" onclick="go('${back}')"><i class="ti ti-arrow-left"></i></button>` : '<div style="width:36px"></div>'}
+    <div style="font-size:15px;font-weight:700;color:var(--navy)">${title}</div>
+    <div style="width:36px"></div>
+  </div>`;
+}
+
+/* Shared site footer used across all main screens */
+function SiteFooter(){
+  return `<footer class="site-footer">
+    <div style="display:flex;justify-content:center;margin-bottom:16px">${LogoOnDark(50)}</div>
+    <p style="font-size:11px;color:rgba(255,255,255,.5);line-height:1.8;margin-bottom:0">
+      Nigeria's trusted wellness &amp; metabolic health platform.<br>
+      MDCN-licensed doctors &middot; NAFDAC-registered pharmacies &middot; All 36 states.
+    </p>
+    <div class="site-footer-links">
+      ${[['ti-brand-x','X'],['ti-brand-instagram','Instagram'],['ti-brand-facebook','Facebook'],['ti-brand-youtube','YouTube'],['ti-brand-tiktok','TikTok']].map(([ic,l])=>`<a href="#"><i class="ti ${ic}"></i> ${l}</a>`).join('')}
+    </div>
+    <div style="height:1px;background:rgba(255,255,255,.08);margin-bottom:16px"></div>
+    <p style="font-size:10px;color:rgba(255,255,255,.28);line-height:1.7">
+      &copy; <span class="wbv-year"></span> WellBodyVital Health Ltd &middot; wellbodyvital.com<br>
+      Not a hospital &middot; All prescriptions by MDCN-licensed physicians only
+    </p>
+  </footer>`;
+}
+
+/* ==========================================================  SCREEN — LANDING  */
+function Landing(){
+  return `<div>
+    <section class="hg" style="padding:48px 24px 56px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-80px;right:-80px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.025)"></div>
+      <div style="margin-bottom:28px">${LogoOnDark(56)}</div>
+      <div class="fu a1" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:5px 14px;margin-bottom:18px">
+        <i class="ti ti-certificate" style="color:#FCD34D;font-size:12px"></i>
+        <span style="font-size:11px;font-weight:600;color:rgba(255,255,255,.85)">The trusted wellness infrastructure for modern metabolic health</span>
+      </div>
+      <h1 class="fu a2" style="color:#fff;font-size:36px;line-height:1.12;margin-bottom:14px">Feel Better.<br>Every Day.</h1>
+      <p class="fu a3" style="color:rgba(255,255,255,.72);font-size:16px;line-height:1.65;margin-bottom:32px;max-width:340px">Personalized wellness programs designed around your body, lifestyle, and goals.</p>
+      <div class="fu a4" style="display:flex;flex-direction:column;gap:10px;max-width:310px">
+        <button class="btn bc" onclick="go('signup')" style="font-size:16px"><i class="ti ti-heart-plus"></i> Begin Your Wellness Journey</button>
+        <button class="btn" style="background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.25);color:#fff;font-size:14px" onclick="go('login')">I Already Have an Account</button>
+      </div>
+      <p style="color:rgba(255,255,255,.32);font-size:11px;margin-top:14px">Free assessment &middot; No credit card &middot; 5 minutes</p>
+    </section>
+
+    <!-- Trust strip -->
+    <div style="background:var(--bgc);padding:12px 18px;border-bottom:1px solid var(--gray)">
+      <div style="display:flex;gap:20px;overflow-x:auto">
+        ${[['ti-shield-check','NAFDAC Compliant'],['ti-user-check','MDCN Doctors'],['ti-building-store','Partner Pharmacies'],['ti-lock','NDPR Secure'],['ti-certificate','Science-Backed']].map(([ic,t])=>`<div style="display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0"><i class="ti ${ic}" style="color:var(--p);font-size:14px"></i><span style="font-size:11px;font-weight:600;color:var(--nm)">${t}</span></div>`).join('')}
+      </div>
+    </div>
+
+    <div class="sb-plain">
+      <!-- Stats -->
+      <div class="g3" style="margin-bottom:24px">
+        ${[['14K+','Members'],['99%','Satisfaction'],['52K+','kg Shed']].map(([v,l])=>`<div class="stat" style="text-align:center;padding:12px 8px"><div class="sv" style="font-size:19px">${v}</div><div class="sl">${l}</div></div>`).join('')}
+      </div>
+
+      <!-- Positioning -->
+      <div style="margin-bottom:22px">
+        <p class="ey" style="margin-bottom:8px">More than weight loss</p>
+        <h2 style="font-size:18px;margin-bottom:10px;line-height:1.3">Total metabolic wellness — <span style="color:var(--p)">built for your life</span></h2>
+        <p style="font-size:14px;margin-bottom:16px">WellBodyVital addresses the root causes of poor health: metabolic imbalance, excess weight, low energy, and lifestyle patterns — with science-backed programs led by licensed Nigerian physicians.</p>
+        <div class="g2" style="gap:10px">
+          ${[['ti-heart-rate-monitor','#E0F2FE','#0369A1','Metabolic Health','Blood sugar, BMI, hormones'],['ti-scale','#D1FAE5','#0F766E','Weight Management','Sustainable fat loss'],['ti-brain','#EDE9FE','#5B21B6','Energy &amp; Mood','Daily vitality'],['ti-moon','#FFF7ED','#C2410C','Sleep &amp; Recovery','Rest as medicine']].map(([ic,bg,c,t,d])=>`<div class="card" style="padding:14px"><i class="ti ${ic}" style="color:${c};font-size:20px;background:${bg};padding:8px;border-radius:10px;display:inline-block;margin-bottom:9px"></i><div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:2px">${t}</div><div style="font-size:11px;color:var(--nl)">${d}</div></div>`).join('')}
+        </div>
+      </div>
+
+      <!-- How it works -->
+      <h2 style="font-size:18px;margin-bottom:16px">How It Works</h2>
+      ${[['ti-clipboard-list','#E0F2FE','#0369A1','1. Complete your assessment','Answer our personalized wellness questionnaire confidentially.'],['ti-stethoscope','#D1FAE5','#0F766E','2. Meet your licensed doctor','An MDCN-registered physician reviews your full health profile.'],['ti-prescription','#FEF3C7','#D97706','3. Receive your wellness plan','A programme tailored to your body, goals, and lifestyle.'],['ti-trending-down','#EDE9FE','#5B21B6','4. Track progress every day','Monitor your metabolic health with your dedicated care team.']].map(([ic,bg,c,t,d])=>`<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px"><div style="width:44px;height:44px;background:${bg};border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${ic}" style="color:${c};font-size:22px"></i></div><div><div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:2px">${t}</div><p style="font-size:13px;margin:0">${d}</p></div></div>`).join('')}
+
+      <!-- Plans teaser -->
+      <div class="cteal" style="margin:20px 0">
+        <p class="ey" style="margin-bottom:8px">Wellness Plans</p>
+        <h3 style="color:var(--navy);font-size:16px;margin-bottom:4px">Plans from &#8358;15,000 / month</h3>
+        <p style="font-size:13px;margin-bottom:14px">Coaching, doctor consultations, or full GLP-1 prescription access — tailored to your goals.</p>
+        <button class="btn bp bsm" style="width:auto;padding:0 20px" onclick="go('plans')">Explore All Plans &#8594;</button>
+      </div>
+
+      <!-- Philosophy -->
+      <div class="cnavy" style="margin-bottom:20px;text-align:center">
+        <i class="ti ti-quote" style="color:var(--pm);font-size:28px;margin-bottom:12px;display:block"></i>
+        <p style="font-family:'Playfair Display',serif;font-size:16px;color:#fff;line-height:1.65;margin-bottom:8px">"Wellness isn't a destination. It's the daily decision to show up for your body — <em>not once, every day</em>."</p>
+        <p style="font-size:11px;color:rgba(255,255,255,.4)">— WellBodyVital Team</p>
+      </div>
+
+      <!-- Disclaimer -->
+      <div class="note ny" style="margin-bottom:22px">
+        <i class="ti ti-info-circle" style="color:var(--warn);font-size:16px;flex-shrink:0;margin-top:1px"></i>
+        <p style="font-size:11px;color:#78350F;line-height:1.65;margin:0"><strong>Medical Disclaimer:</strong> WellBodyVital is a wellness platform, not a hospital or pharmacy. All medical decisions are made exclusively by MDCN-licensed Nigerian physicians. Prescription medications (including GLP-1) are dispensed only by NAFDAC-registered pharmacies with a valid prescription. No specific outcomes are guaranteed.</p>
+      </div>
+
+      <button class="btn bp" style="margin-bottom:12px" onclick="go('signup')"><i class="ti ti-heart-plus"></i> Start Your Free Assessment</button>
+      <button class="btn bo" style="margin-bottom:0" onclick="go('login')">Log into existing account</button>
+    </div>
+
+    ${SiteFooter()}
+  </div>`;
+}
+
+/* ==========================================================  SCREEN — AUTH  */
+function Auth(){
+  const isL = S.screen==='login';
+  return `<div>
+    <div class="hg" style="padding:40px 22px 30px">
+      <div style="margin-bottom:18px">${LogoOnDark(48)}</div>
+      <h2 style="color:#fff;font-size:19px;margin-bottom:4px">${isL?'Welcome back':'Join WellBodyVital'}</h2>
+      <p style="color:rgba(255,255,255,.62);font-size:13px">${isL?'Continue your wellness journey':'Your personalized wellness journey starts today'}</p>
+    </div>
+    <div style="padding:22px">
+      <div class="togrow">
+        <button class="togb ${!isL?'on':''}" onclick="go('signup')">Sign Up</button>
+        <button class="togb ${isL?'on':''}"  onclick="go('login')">Log In</button>
+      </div>
+      ${!isL?`<div class="g2"><div class="fi"><label class="fl">First Name</label><input class="inp" type="text" placeholder="Amara"></div><div class="fi"><label class="fl">Last Name</label><input class="inp" type="text" placeholder="Okafor"></div></div>`:''}
+      <div class="fi"><label class="fl">Email Address</label><div class="iw"><i class="ti ti-mail ii"></i><input class="inp" type="email" placeholder="you@email.com"></div></div>
+      ${!isL?`<div class="fi"><label class="fl">Phone Number</label><div class="iw"><i class="ti ti-phone ii"></i><input class="inp" type="tel" placeholder="+234 800 000 0000"></div></div>`:''}
+      <div class="fi"><label class="fl">Password</label><div class="iw"><i class="ti ti-lock ii"></i><input class="inp" type="password" placeholder="Min. 8 characters"></div></div>
+      ${!isL?`<div class="note nt" style="margin-bottom:14px"><label style="display:flex;gap:9px;align-items:flex-start;cursor:pointer;width:100%"><input type="checkbox" style="margin-top:3px;flex-shrink:0"><span style="font-size:12px;color:var(--navy);line-height:1.6">I agree to WellBodyVital's <strong>Terms of Service</strong> and <strong>Privacy Policy</strong>, and consent to my medical data being handled per NDPR guidelines.</span></label></div>`:''}
+      <button class="btn bc" style="margin-bottom:14px" onclick="doAuth()"><i class="ti ti-${isL?'login':'heart-plus'}"></i> ${isL?'Log In':'Start My Wellness Journey'}</button>
+      <div class="dor">or continue with</div>
+      <button class="btn bo" style="margin-bottom:14px;gap:9px">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Continue with Google
+      </button>
+      <p style="text-align:center;font-size:13px;color:var(--nl)">${isL?"No account? ":"Have an account? "}<span style="color:var(--p);font-weight:600;cursor:pointer" onclick="go('${isL?'signup':'login'}')">${isL?'Sign up free':'Log in'}</span></p>
+      <p style="text-align:center;margin-top:10px"><span style="font-size:12px;color:var(--nl);cursor:pointer" onclick="go('landing')">&#8592; Back to home</span></p>
+    </div>
+  </div>`;
+}
+function doAuth(){ setState({screen:'onboarding',step:0}); document.getElementById('bottom-nav').style.display='none'; }
+
+/* ==========================================================  SCREEN — ONBOARDING  */
+function Onboarding(){
+  const steps=['Personal Details','Body &amp; Goals','Emergency Contact','Health Consent'];
+  const s=S.step;
+  const c=[
+    `<div class="g2"><div class="fi"><label class="fl">Date of Birth</label><input class="inp" type="date" value="1990-06-15"></div><div class="fi"><label class="fl">Gender</label><select class="inp"><option>Female</option><option>Male</option><option>Non-binary</option><option>Prefer not to say</option></select></div></div><div class="fi"><label class="fl">State of Residence</label><select class="inp"><option>Lagos</option><option>Abuja (FCT)</option><option>Kano</option><option>Rivers</option><option>Ogun</option><option>Delta</option><option>Anambra</option><option>Oyo</option><option>Enugu</option></select></div><div class="fi"><label class="fl">Delivery Address</label><textarea class="inp" rows="3" placeholder="Full delivery address for pharmacy orders..."></textarea></div>`,
+    `<div class="g2"><div class="fi"><label class="fl">Height (cm)</label><input class="inp" type="number" value="165"></div><div class="fi"><label class="fl">Weight (kg)</label><input class="inp" type="number" value="98"></div></div><div class="cteal" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px"><span style="font-size:13px;font-weight:700;color:var(--navy)">Your BMI</span><span class="badge bwarn">36.0 — Obese II</span></div><div class="prog plg" style="margin-bottom:7px"><div class="pf" style="width:72%;background:var(--warn)"></div></div><p style="font-size:12px;color:var(--p);margin:0">BMI &#8805; 30 qualifies you for our medical wellness evaluation.</p></div><div class="fi"><label class="fl">Wellness Goal</label><select class="inp"><option>Lose weight &amp; improve metabolic health</option><option>Improve energy &amp; daily vitality</option><option>Manage blood sugar / diabetes risk</option><option>Build healthy long-term habits</option><option>All of the above</option></select></div><div class="fi"><label class="fl">Timeline</label><select class="inp"><option>3 months</option><option>6 months</option><option selected>12 months</option><option>Ongoing lifestyle change</option></select></div>`,
+    `<div class="note nt" style="margin-bottom:14px"><i class="ti ti-heart" style="color:var(--p);font-size:15px;flex-shrink:0;margin-top:1px"></i><p style="font-size:13px;color:var(--navy);margin:0">In a medical emergency, we will contact this person on your behalf immediately.</p></div><div class="fi"><label class="fl">Contact Full Name</label><input class="inp" type="text" value="Chidi Okafor"></div><div class="fi"><label class="fl">Relationship</label><select class="inp"><option>Spouse</option><option>Parent</option><option>Sibling</option><option>Friend</option></select></div><div class="fi"><label class="fl">Phone Number</label><input class="inp" type="tel" value="+234 800 987 6543"></div>`,
+    `${[['Medical Data Consent','I consent to WellBodyVital collecting and processing my medical data for healthcare delivery under NDPR guidelines.'],['Telehealth Consent','Consultations are conducted remotely via secure video/chat with MDCN-licensed physicians.'],['Privacy Policy','I agree to WellBodyVital\'s Privacy Policy and data handling practices.'],['Terms of Service','I agree to WellBodyVital\'s Terms including subscription, cancellation, and refund policies.'],['Rx Acknowledgement','Prescription decisions (including GLP-1) are made solely by licensed doctors and are not guaranteed.']].map(([t,d])=>`<div class="ropt"><input type="checkbox" checked><div><div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:2px">${t}</div><div style="font-size:12px;color:var(--nm);line-height:1.55">${d}</div></div></div>`).join('')}`
+  ];
+  return `<div>
+    <div style="padding:16px 20px 0;background:var(--bgc);border-bottom:1px solid var(--gray);position:sticky;top:0;z-index:40">
+      ${LogoOnLight(44)}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:13px;margin-bottom:9px"><h3>${steps[s]}</h3><span class="cap">Step ${s+1} of 4</span></div>
+      <div class="sbar">${steps.map((_,i)=>`<div class="sseg ${i<=s?'done':''}"></div>`).join('')}</div>
+    </div>
+    <div style="padding:20px 20px 40px">
+      ${c[s]}
+      <div style="display:flex;gap:12px;margin-top:10px">
+        ${s>0?`<button class="btn bgh" style="width:auto;padding:0 20px;flex-shrink:0" onclick="setState({step:${s-1}})">&#8592; Back</button>`:''}
+        <button class="btn bp" onclick="${s<3?`setState({step:${s+1}})`:`go('plans')`}">${s<3?'Continue &#8594;':'View Wellness Plans &#8594;'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ==========================================================  SCREEN — PLANS  */
+function Plans(){
+  const P=[
+    {id:'starter',nm:'Starter',tag:'Begin your wellness journey',price:'15,000',badge:null,c:'var(--pd)',cl:'var(--ppale)',feats:['Personalised meal plan','Custom fitness programme','Weekly coaching session','Supplement guidance','Metabolic progress tracking']},
+    {id:'pro',nm:'Pro',tag:'Guided by a real physician',price:'35,000',badge:'Most Popular',bc:'var(--p)',c:'var(--p)',cl:'var(--ppale)',feats:['Everything in Starter','Licensed doctor consultation','Medical eligibility screening','Prescription access if approved','Priority support','Lab result guidance']},
+    {id:'premium',nm:'Premium',tag:'The complete metabolic health experience',price:'65,000',badge:'GLP-1 Access',bc:'var(--coral)',c:'var(--cd)',cl:'var(--cl)',feats:['Everything in Pro','GLP-1 medication access','NAFDAC pharmacy delivery','Monthly physician follow-up','Concierge support 24/7','Refill &amp; side effect management']},
+  ];
+  return `<div>
+    <div class="hg" style="padding:30px 22px 22px">
+      <div style="margin-bottom:16px">${LogoOnDark(44)}</div>
+      <h2 style="color:#fff;font-size:18px;margin-bottom:4px">Choose Your Wellness Plan</h2>
+      <p style="color:rgba(255,255,255,.62);font-size:13px">All plans include secure data handling and licensed physician oversight.</p>
+    </div>
+    <div class="sb-plain">
+      ${P.map(p=>`<div class="plan ${S.plan===p.id?'sel':''} ${p.id==='premium'?'prem':''}" style="margin-bottom:14px" onclick="setState({plan:'${p.id}'})">
+        ${p.badge?`<div class="prib" style="background:${p.bc}">${p.badge}</div>`:''}
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:13px;padding-right:${p.badge?64:0}px">
+          <div><div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:800;color:${p.c}">${p.nm}</div><div style="font-size:12px;color:var(--nl);margin-top:2px">${p.tag}</div></div>
+          <div style="text-align:right"><div style="font-size:22px;font-weight:800;color:var(--navy)">&#8358;${p.price}</div><div style="font-size:10px;color:var(--nl)">/month</div></div>
+        </div>
+        <div class="div"></div>
+        ${p.feats.map(f=>`<div class="fc"><i class="ti ti-check" style="color:${p.c}"></i><span style="font-size:13px;color:var(--nm)">${f}</span></div>`).join('')}
+        ${S.plan===p.id?`<div style="margin-top:11px;background:${p.cl};border-radius:8px;padding:7px 12px;display:flex;align-items:center;gap:6px"><i class="ti ti-circle-check" style="color:${p.c}"></i><span style="font-size:12px;font-weight:700;color:${p.c}">Selected Plan</span></div>`:''}
+      </div>`).join('')}
+      <div class="note ny" style="margin-bottom:18px"><i class="ti ti-lock" style="color:var(--warn);font-size:15px;flex-shrink:0;margin-top:1px"></i><p style="font-size:11px;color:#78350F;margin:0">GLP-1 medications require a valid prescription from a licensed MDCN physician. Eligibility is determined by clinical assessment. Prescription not guaranteed.</p></div>
+      <button class="btn bc" style="margin-bottom:11px" onclick="go('payment')"><i class="ti ti-credit-card"></i> Subscribe to ${P.find(p=>p.id===S.plan)?.nm} Plan</button>
+      <button class="btn bo" style="height:42px;font-size:13px" onclick="go('questionnaire')">Complete wellness questionnaire first</button>
+    </div>
+  </div>`;
+}
+
+/* ==========================================================  SCREEN — PAYMENT  */
+function Payment(){
+  const NM={starter:'Starter',pro:'Pro',premium:'Premium'};
+  const PR={starter:'15,000',pro:'35,000',premium:'65,000'};
+  const methods=[{id:'card',ic:'ti-credit-card',l:'Card Payment'},{id:'bank',ic:'ti-building-bank',l:'Bank Transfer'},{id:'paystack',ic:'ti-brand-stripe',l:'Paystack'},{id:'flutter',ic:'ti-bolt',l:'Flutterwave'},{id:'wallet',ic:'ti-wallet',l:'Wallet'}];
+  const m=S.payMethod;
+  return `<div>${TopBar('Secure Payment','plans')}
+  <div class="sb-plain">
+    <div class="cteal" style="margin-bottom:18px"><div style="display:flex;justify-content:space-between;align-items:center"><div><p class="ey" style="margin-bottom:4px">Subscribing to</p><div style="font-family:'Playfair Display',serif;font-size:21px;font-weight:800;color:var(--navy)">${NM[S.plan]} Plan</div><div style="font-size:12px;color:var(--p)">Monthly &middot; Cancel anytime</div></div><div style="text-align:right"><div style="font-size:26px;font-weight:800;color:var(--navy)">&#8358;${PR[S.plan]}</div><div class="cap">/month</div></div></div></div>
+    <h3 style="margin-bottom:11px">Payment Method</h3>
+    <div class="g2" style="margin-bottom:18px">
+      ${methods.map(md=>`<div class="ptile ${m===md.id?'on':''}" onclick="setState({payMethod:'${md.id}'})"><i class="ti ${md.ic}" style="font-size:19px;color:${m===md.id?'var(--p)':'var(--nl)'}"></i><span style="font-size:12px;font-weight:600;color:${m===md.id?'var(--p)':'var(--nm)'}">${md.l}</span></div>`).join('')}
+    </div>
+    ${m==='card'?`<div class="fi"><label class="fl">Card Number</label><div class="iw"><i class="ti ti-credit-card ii"></i><input class="inp" placeholder="0000  0000  0000  0000"></div></div><div class="g2"><div class="fi"><label class="fl">Expiry</label><input class="inp" placeholder="MM / YY"></div><div class="fi"><label class="fl">CVV</label><input class="inp" type="password" placeholder="&bull;&bull;&bull;"></div></div><div class="fi"><label class="fl">Cardholder Name</label><input class="inp" placeholder="Name as on card"></div>`:m==='bank'?`<div class="card" style="margin-bottom:14px"><p class="ey" style="margin-bottom:11px">Bank Transfer Details</p>${[['Bank','Guaranty Trust Bank (GTB)'],['Account No.','0123456789'],['Account Name','WellBodyVital Health Ltd'],['Reference','WBV-2026-48291']].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bga)"><span style="font-size:12px;color:var(--nl)">${k}</span><span style="font-size:13px;font-weight:700;color:var(--navy)">${v}</span></div>`).join('')}<p style="font-size:11px;color:var(--nl);margin-top:9px">Include the reference in your transfer narration. Confirmed within 30 minutes.</p></div>`:m==='paystack'?`<div class="card" style="text-align:center;padding:26px;margin-bottom:14px"><i class="ti ti-brand-stripe" style="font-size:48px;color:#00c3f7;margin-bottom:11px;display:block"></i><h3 style="margin-bottom:7px">Pay with Paystack</h3><p style="font-size:13px">Redirecting to Paystack's secure, PCI-DSS compliant payment page.</p></div>`:m==='flutter'?`<div class="card" style="text-align:center;padding:26px;margin-bottom:14px"><i class="ti ti-bolt" style="font-size:48px;color:#f5a623;margin-bottom:11px;display:block"></i><h3 style="margin-bottom:7px">Pay with Flutterwave</h3><p style="font-size:13px">Redirecting to Flutterwave's secure checkout.</p></div>`:`<div class="cteal" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center"><div><p class="ey" style="margin-bottom:4px">Wallet Balance</p><div style="font-size:24px;font-weight:800;color:var(--navy)">&#8358;42,500.00</div></div><button class="btn bp bsm" style="width:auto;padding:0 14px">Top Up</button></div></div>`}
+    <div style="display:flex;gap:8px;margin-bottom:18px"><input class="inp" placeholder="Promo / referral code" style="flex:1"><button class="btn bgh bsm" style="width:auto;padding:0 14px;flex-shrink:0">Apply</button></div>
+    <div class="card" style="margin-bottom:18px"><p class="ey" style="margin-bottom:11px">Order Summary</p>${[[`${NM[S.plan]} Plan`,`&#8358;${PR[S.plan]}`],['Platform Fee','&#8358;0'],['Discount','&#8358;0']].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:6px 0"><span style="font-size:13px;color:var(--nl)">${k}</span><span style="font-size:13px;font-weight:600">${v}</span></div>`).join('')}<div class="div"></div><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;font-weight:700;color:var(--navy)">Total Due</span><span style="font-size:22px;font-weight:800;color:var(--p)">&#8358;${PR[S.plan]}</span></div></div>
+    <button class="btn bc" style="margin-bottom:11px" onclick="cPay()"><i class="ti ti-lock"></i> Pay Securely &mdash; &#8358;${PR[S.plan]}</button>
+    <div style="display:flex;align-items:center;justify-content:center;gap:6px"><i class="ti ti-shield-check" style="color:var(--p);font-size:13px"></i><span class="cap">256-bit SSL &middot; PCI DSS &middot; NDPR-compliant</span></div>
+  </div></div>`;
+}
+function cPay(){ go('questionnaire'); setTimeout(()=>setState({modal:'pay_ok'}),60); }
+
+/* ==========================================================  SCREEN — QUESTIONNAIRE  */
+function Questionnaire(){
+  const q=S.qStep;
+  const secs=[{t:'Current Health',s:'Metabolic baseline &amp; goals'},{t:'Medical History',s:'Past &amp; present conditions'},{t:'Medications &amp; Allergies',s:'Current treatments'},{t:'Lifestyle Profile',s:'Habits, sleep &amp; stress'},{t:'Doctor Review Consent',s:'Finalise &amp; submit'}];
+  const c=[
+    `<div class="g2"><div class="fi"><label class="fl">Weight (kg)</label><input class="inp" type="number" value="98"></div><div class="fi"><label class="fl">Height (cm)</label><input class="inp" type="number" value="165"></div></div><div class="cteal" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--navy)">Calculated BMI</span><span class="badge bwarn">36.0 — Obese</span></div><div class="prog plg" style="margin-bottom:7px"><div class="pf" style="width:72%;background:var(--warn)"></div></div><p style="font-size:12px;color:var(--p);margin:0">BMI &#8805; 30 qualifies you for medical evaluation.</p></div><div class="fi"><label class="fl">Primary Goal</label><select class="inp"><option>Lose weight &amp; improve metabolic markers</option><option>Increase energy &amp; focus</option><option>Better blood sugar control</option><option>All of the above</option></select></div><div class="fi"><label class="fl">Previous attempts</label><select class="inp"><option>Yes, diet &amp; exercise only</option><option>Yes, with medications</option><option>Yes, bariatric surgery</option><option>No previous attempts</option></select></div>`,
+    `${[['Type 2 Diabetes or pre-diabetes','D'],['High blood pressure (Hypertension)','H'],['Thyroid disease','T'],['Kidney or liver disease','K'],['Pancreatitis history','P'],['Heart disease or stroke','C']].map(([q2,n])=>`<div style="background:var(--bga);border-radius:var(--rmd);padding:13px;margin-bottom:10px"><div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:9px">${q2}</div><div style="display:flex;gap:8px">${['Yes','No'].map((t,i)=>`<label style="flex:1;display:flex;align-items:center;gap:6px;background:var(--bgc);border:1.5px solid var(--gray);border-radius:8px;padding:9px 12px;cursor:pointer"><input type="radio" name="${n}" ${i===1?'checked':''} style="accent-color:var(--p)"> <span style="font-size:13px">${t}</span></label>`).join('')}</div></div>`).join('')}`,
+    `<div class="fi"><label class="fl">Current Medications</label><textarea class="inp" rows="3" placeholder="Names and dosages..."></textarea></div><div class="fi"><label class="fl">Known Allergies</label><textarea class="inp" rows="2" placeholder="Drug, food, or environmental..."></textarea></div><div class="fi"><label class="fl">Previous Weight Loss Meds</label><select class="inp"><option>None</option><option>Orlistat</option><option>Phentermine</option><option>GLP-1 (Ozempic/Wegovy/Saxenda)</option><option>Other</option></select></div><div style="background:var(--bga);border-radius:var(--rmd);padding:13px"><div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:9px">Pregnancy / Breastfeeding status</div><div style="display:flex;gap:7px">${['Pregnant','Breastfeeding','Neither / N/A'].map((t,i)=>`<label style="flex:1;display:flex;align-items:center;gap:5px;background:var(--bgc);border:1.5px solid var(--gray);border-radius:8px;padding:9px 8px;cursor:pointer;font-size:11px"><input type="radio" name="preg" ${i===2?'checked':''} style="accent-color:var(--p)"> ${t}</label>`).join('')}</div></div>`,
+    `<div class="fi"><label class="fl">Exercise frequency</label><select class="inp"><option>Sedentary</option><option>1-2x/week</option><option>3-4x/week</option><option>5+/week</option></select></div><div class="fi"><label class="fl">Eating pattern</label><select class="inp"><option selected>Mixed / no specific diet</option><option>High carbohydrate</option><option>Low carb / Keto</option><option>Vegetarian</option><option>Vegan</option></select></div><div class="fi"><label class="fl">Daily water intake</label><select class="inp"><option>Less than 1 litre</option><option selected>1-2 litres</option><option>2-3 litres</option><option>3+ litres</option></select></div><div class="fi"><label class="fl">Average sleep</label><select class="inp"><option selected>Less than 6 hours</option><option>6-7 hours</option><option>7-8 hours</option><option>8+ hours</option></select></div><div class="fi"><label class="fl">Stress level</label><select class="inp"><option>Low</option><option selected>Moderate</option><option>High</option><option>Very high</option></select></div>`,
+    `<div class="cteal" style="text-align:center;padding:22px;margin-bottom:14px"><i class="ti ti-circle-check" style="color:var(--p);font-size:42px;margin-bottom:11px;display:block"></i><h2 style="font-size:17px;color:var(--navy);margin-bottom:5px">Wellness Intake Complete</h2><p style="font-size:13px;color:var(--p)">A licensed physician will review your submission within 24 hours.</p></div><div class="note ny" style="margin-bottom:14px"><i class="ti ti-alert-triangle" style="color:var(--warn);font-size:15px;flex-shrink:0;margin-top:1px"></i><p style="font-size:11px;color:#78350F;margin:0;line-height:1.65"><strong>Clinical Disclosure:</strong> All prescription decisions are made solely by MDCN-licensed doctors. Prescription not guaranteed. No specific wellness outcomes guaranteed.</p></div><div class="ropt"><input type="checkbox" checked><span style="font-size:13px;color:var(--nm);line-height:1.6">I confirm I understand that prescription decisions are made only by licensed physicians, and WellBodyVital does not guarantee any specific treatment or outcome.</span></div>`
+  ];
+  const sec=secs[q];
+  return `<div>
+    <div style="padding:14px 20px 0;background:var(--bgc);border-bottom:1px solid var(--gray);position:sticky;top:0;z-index:40">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><div><div style="font-size:14px;font-weight:700;color:var(--navy)">${sec.t}</div><div class="cap">${sec.s}</div></div><span style="font-size:12px;font-weight:700;color:var(--p)">${q+1} / 5</span></div>
+      <div class="prog" style="margin-bottom:12px"><div class="pf" style="width:${(q+1)/5*100}%"></div></div>
+    </div>
+    <div style="padding:20px 20px 40px">
+      ${c[q]}
+      <div style="display:flex;gap:12px;margin-top:12px">
+        ${q>0?`<button class="btn bgh" style="width:auto;padding:0 18px;flex-shrink:0" onclick="setState({qStep:${q-1}})">&#8592; Back</button>`:`<button class="btn bgh" style="width:auto;padding:0 18px;flex-shrink:0" onclick="go('plans')">&#8592; Plans</button>`}
+        <button class="btn bp" onclick="${q<4?`setState({qStep:${q+1}})`:`finishQ()`}">${q<4?'Continue &#8594;':'Submit to Doctor &#8594;'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+function finishQ(){ go('dashboard'); document.getElementById('bottom-nav').style.display='flex'; }
+
+/* ==========================================================  SCREEN — DASHBOARD  */
+function Dashboard(){
+  return `<div>
+    <div style="background:var(--bgc);padding:16px 19px;border-bottom:1px solid var(--gray)">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:11px;color:var(--nl);margin-bottom:2px">Good morning &#128075;</div><div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:800;color:var(--navy)">Amara Okafor</div></div>
+        <div style="display:flex;gap:9px;align-items:center">
+          <button onclick="go('notifications')" style="background:var(--pl);border:none;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative"><i class="ti ti-bell" style="color:var(--p);font-size:18px"></i><div class="ndot"></div></button>
+          <div style="width:40px;height:40px;border-radius:50%;background:var(--p);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:14px;font-weight:800;color:#fff">AO</div>
+        </div>
+      </div>
+    </div>
+    <div style="margin:14px;background:linear-gradient(135deg,var(--pdk),var(--p));border-radius:var(--rxl);padding:17px;color:#fff;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-40px;right:-40px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.05)"></div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div style="font-size:9px;color:rgba(255,255,255,.55);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px">Active Plan</div><div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:800">Pro Wellness Plan</div><div style="font-size:10px;color:rgba(255,255,255,.6);margin-top:1px">Renews 15 July 2026</div></div>
+        <span class="badge" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.22)"><i class="ti ti-check" style="font-size:9px"></i> Active</span>
+      </div>
+      <div style="display:flex;margin-top:13px;border-top:1px solid rgba(255,255,255,.12);padding-top:11px">
+        ${[['Doctor','Assigned'],['Rx Status','Pending'],['Next Consult','20 Jul']].map(([k,v])=>`<div style="flex:1"><div style="font-size:9px;color:rgba(255,255,255,.5)">${k}</div><div style="font-size:12px;font-weight:700">${v}</div></div>`).join('')}
+      </div>
+    </div>
+    <div style="padding:0 14px">
+      <div class="g2" style="margin-bottom:14px">
+        <div class="stat"><div class="sl">Current Weight</div><div class="sv">94.5 <span style="font-size:13px;color:var(--nl)">kg</span></div><div class="sc dn">&#8722;3.5 kg this month</div></div>
+        <div class="stat"><div class="sl">Goal Weight</div><div class="sv">73 <span style="font-size:13px;color:var(--nl)">kg</span></div><div class="sc" style="color:var(--nl)">21.5 kg away</div></div>
+        <div class="stat"><div class="sl">BMI</div><div class="sv">34.7</div><span class="badge bwarn" style="margin-top:5px">Obese I</span></div>
+        <div class="stat"><div class="sl">Days on Plan</div><div class="sv">23</div><div class="sc up">Streak! &#128293;</div></div>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3>Metabolic Progress</h3><span class="badge bok">&#8722;3.5 kg total</span></div>
+        <div style="display:flex;align-items:flex-end;gap:5px;height:72px">
+          ${[98,97.2,96.8,96,95.5,94.5].map((w,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:100%;background:${i===5?'var(--p)':'var(--pl)'};border-radius:3px 3px 0 0;height:${Math.round((w-93)/(98-93)*58+7)}px"></div><div style="font-size:9px;color:var(--nl)">W${i+1}</div></div>`).join('')}
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:14px;cursor:pointer" onclick="go('doctor')">
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+          <div style="width:48px;height:48px;border-radius:50%;background:var(--il);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-user-heart" style="color:var(--inf);font-size:24px"></i></div>
+          <div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--navy)">Dr. Kemi Adeyemi</div><div class="cap">MBBS, Internal Medicine &middot; Lagos</div><div style="display:flex;gap:5px;margin-top:4px"><span class="badge bok" style="font-size:9px">&#9679; Online</span><span class="badge binf" style="font-size:9px">MDCN Verified</span></div></div>
+          <i class="ti ti-chevron-right" style="color:var(--gm);font-size:16px"></i>
+        </div>
+        <div style="display:flex;gap:8px"><button class="btn bp bsm" style="flex:1" onclick="go('doctor')"><i class="ti ti-message"></i> Secure Chat</button><button class="btn bgh bsm" style="flex:1"><i class="ti ti-calendar"></i> Book Consult</button></div>
+      </div>
+      <h3 style="margin-bottom:11px">Wellness Toolkit</h3>
+      <div class="g2" style="margin-bottom:14px">
+        ${[['ti-salad','#D1FAE5','#059669','Nutrition Plan','Today\'s meal guide'],['ti-run','#E0F2FE','#0369A1','Movement Plan','Daily fitness routine'],['ti-pill','#FDE8FF','#7C3AED','Supplements','Daily schedule'],['ti-package','var(--cl)','var(--cd)','Pharmacy','Track your order']].map(([ic,bg,c,t,s])=>`<div class="card" style="cursor:pointer;padding:13px" onclick="go('pharmacy')"><div style="width:36px;height:36px;background:${bg};border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:7px"><i class="ti ${ic}" style="color:${c};font-size:17px"></i></div><div style="font-size:12px;font-weight:700;color:var(--navy)">${t}</div><div class="cap">${s}</div></div>`).join('')}
+      </div>
+      <h3 style="margin-bottom:11px">Today's Wellness Habits</h3>
+      <div class="card" style="margin-bottom:14px">
+        ${[[true,'Log morning weight'],[true,'Take morning supplement'],[false,'30 min walk — 5 PM'],[false,'Log dinner'],[false,'Drink 2L water']].map(([done,t])=>`<div style="display:flex;gap:9px;align-items:center;padding:10px 0;border-bottom:1px solid var(--bga)"><i class="ti ti-${done?'circle-check':'circle'}" style="color:${done?'var(--ok)':'var(--gm)'};font-size:18px;flex-shrink:0"></i><span style="font-size:13px;color:${done?'var(--nl)':'var(--navy)'};text-decoration:${done?'line-through':'none'}">${t}</span></div>`).join('')}
+      </div>
+      <!-- Upgrade banner — last content item, sb padding clears nav -->
+      <div style="background:linear-gradient(135deg,var(--navy),#1e3a5f);border-radius:var(--rxl);padding:18px">
+        <div style="font-size:9px;color:rgba(255,255,255,.5);font-weight:700;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:5px">Upgrade to Premium</div>
+        <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700;margin-bottom:4px;color:#fff">Unlock GLP-1 &amp; Concierge Care</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.65);margin-bottom:14px">Access GLP-1 prescriptions via NAFDAC-registered pharmacies with full physician oversight.</div>
+        <button class="btn bc bsm" style="width:auto;padding:0 18px">Upgrade Now &#8594;</button>
+      </div>
+    </div>
+    <!-- .sb padding-bottom ensures upgrade card clears the bottom nav -->
+    <div style="height:calc(var(--nav-h) + 24px)"></div>
+  </div>`;
+}
+
+/* ==========================================================  SCREEN — PROGRESS  */
+function Progress(){
+  return `<div>
+    <div style="padding:17px 19px;background:var(--bgc);border-bottom:1px solid var(--gray);position:sticky;top:0;z-index:40">
+      <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="font-size:18px">Progress Tracker</h2><button class="btn bgh bsm" style="width:auto;padding:0 13px"><i class="ti ti-plus"></i> Log Weight</button></div>
+    </div>
+    <div class="sb">
+      <div class="g3" style="margin-bottom:18px">${[['Start','98 kg','1 Jun'],['Now','94.5 kg','Today'],['Goal','73 kg','Target']].map(([l,v,d])=>`<div class="stat" style="text-align:center;padding:12px 7px"><div class="sl">${l}</div><div style="font-size:14px;font-weight:800;color:var(--navy);margin:3px 0">${v}</div><div class="cap">${d}</div></div>`).join('')}</div>
+      <div class="cteal" style="margin-bottom:18px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px"><span style="font-size:13px;font-weight:700;color:var(--navy)">Journey Progress</span><span style="font-size:18px;font-weight:800;color:var(--p)">14%</span></div><div class="prog plg" style="margin-bottom:7px"><div class="pf" style="width:14%"></div></div><div style="display:flex;justify-content:space-between"><span class="cap">3.5 kg lost</span><span class="cap">21.5 kg to goal</span></div></div>
+      <div class="card" style="margin-bottom:18px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px"><h3>Weight History</h3><div style="display:flex;gap:3px">${['1W','1M','3M','All'].map((t,i)=>`<button style="border:none;padding:4px 9px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;background:${i===1?'var(--p)':'var(--bga)'};color:${i===1?'#fff':'var(--nl)'}">${t}</button>`).join('')}</div></div>
+        <div style="position:relative;height:88px;margin-bottom:8px">
+          <svg width="100%" height="88" viewBox="0 0 320 88" preserveAspectRatio="none" style="overflow:visible">
+            <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0F766E" stop-opacity=".16"/><stop offset="100%" stop-color="#0F766E" stop-opacity="0"/></linearGradient></defs>
+            <path d="M0,8 L53,16 L107,22 L160,32 L213,40 L267,54 L320,60 L320,88 L0,88 Z" fill="url(#cg)"/>
+            <path d="M0,8 L53,16 L107,22 L160,32 L213,40 L267,54 L320,60" fill="none" stroke="var(--p)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            ${[[0,8],[53,16],[107,22],[160,32],[213,40],[267,54],[320,60]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="4" fill="#fff" stroke="var(--p)" stroke-width="2"/>`).join('')}
+          </svg>
+        </div>
+        <div style="display:flex;justify-content:space-between">${['Jun 1','Jun 8','Jun 15','Jun 22','Jun 29','Jul 6','Today'].map(d=>`<span style="font-size:9px;color:var(--nl)">${d}</span>`).join('')}</div>
+      </div>
+      <h3 style="margin-bottom:11px">BMI History</h3>
+      <div class="card" style="margin-bottom:18px">${[['1 Jun','36.0','Obese II','berr'],['15 Jun','35.2','Obese I','bwarn'],['1 Jul','34.7','Obese I','bwarn']].map(([d,b,c,t])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--bga)"><span class="cap">${d}</span><span style="font-size:15px;font-weight:800;color:var(--navy)">${b}</span><span class="badge ${t}" style="font-size:9px">${c}</span></div>`).join('')}</div>
+      <h3 style="margin-bottom:11px">Milestones</h3>
+      <div class="tl">${[['var(--ok)','First 1 kg lost','8 June 2026','Done'],['var(--ok)','First 3.5 kg lost','6 July 2026','Done'],['var(--gm)','5% body weight lost','~25 Jul 2026','In Progress'],['var(--gm)','First 10 kg lost','~Sept 2026','Upcoming']].map(([c,t,d,s])=>`<div class="tli"><div class="tld" style="background:${c}">${s==='Done'?'&#10003;':s==='In Progress'?'&#9678;':'&#9675;'}</div><div style="flex:1;padding-top:2px"><div style="font-size:14px;font-weight:600;color:var(--navy)">${t}</div><div class="cap">${d}</div><span class="badge ${s==='Done'?'bok':s==='In Progress'?'bteal':'bgray'}" style="margin-top:5px;font-size:9px">${s}</span></div></div>`).join('')}</div>
+    </div>
+  </div>`;
+}
+
+/* ==========================================================  SCREEN — DOCTOR  */
+function Doctor(){
+  return `<div>
+    <div style="background:var(--bgc);padding:17px 19px;border-bottom:1px solid var(--gray)">
+      <div style="display:flex;gap:13px;align-items:center;margin-bottom:14px">
+        <div style="width:54px;height:54px;border-radius:50%;background:var(--il);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-user-heart" style="color:var(--inf);font-size:26px"></i></div>
+        <div><div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:800;color:var(--navy)">Dr. Kemi Adeyemi</div><div class="cap">MBBS &middot; Internal Medicine &middot; 12 yrs exp.</div><div style="display:flex;gap:5px;margin-top:4px"><span class="badge bok" style="font-size:9px">&#9679; Online</span><span class="badge binf" style="font-size:9px">MDCN Verified</span></div></div>
+      </div>
+      <div class="g3" style="gap:7px"><button class="btn bp bsm" onclick="setState({modal:'book'})"><i class="ti ti-calendar"></i> Book</button><button class="btn bgh bsm"><i class="ti ti-upload"></i> Upload</button><button class="btn bo bsm"><i class="ti ti-video"></i> Video</button></div>
+    </div>
+    <div class="sb">
+      <h3 style="margin-bottom:11px">Review Status</h3>
+      ${[['ti-clipboard-list','Intake Reviewed','Doctor reviewed your wellness questionnaire','bok','Done'],['ti-search','Eligibility Check','Metabolic screening in progress','bwarn','Active'],['ti-prescription','Prescription Decision','Awaiting physician decision','bgray','Pending'],['ti-pill','Pharmacy Order','Not yet initiated','bgray','Pending']].map(([ic,t,d,badge,s])=>`<div class="card" style="padding:12px;display:flex;gap:9px;align-items:center;margin-bottom:8px"><i class="ti ${ic}" style="font-size:19px;color:var(--p);flex-shrink:0"></i><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--navy)">${t}</div><div class="cap">${d}</div></div><span class="badge ${badge}" style="font-size:9px;flex-shrink:0">${s}</span></div>`).join('')}
+      <div class="cteal" style="margin:15px 0"><p class="ey" style="margin-bottom:7px">Doctor's Preliminary Note</p><p style="font-size:13px;color:var(--navy);line-height:1.7;font-style:italic">"Based on your assessment, you are an excellent candidate for our metabolic wellness programme. I will complete my full review within 24 hours."</p><div class="cap" style="margin-top:8px">— Dr. Kemi Adeyemi &middot; 6 July 2026</div></div>
+      <h3 style="margin-bottom:11px">Secure Consultation Chat</h3>
+      <div class="card" style="padding:0;margin-bottom:14px;overflow:hidden">
+        <div style="background:var(--bga);padding:9px 13px;border-bottom:1px solid var(--gray);display:flex;align-items:center;gap:6px"><i class="ti ti-lock" style="color:var(--p);font-size:12px"></i><span class="cap">End-to-end encrypted &middot; NDPR-compliant</span></div>
+        <div id="chat-msgs" style="padding:13px;display:flex;flex-direction:column;gap:4px;max-height:210px;overflow-y:auto">
+          ${S.chat.map(msg=>`<div style="display:flex;flex-direction:column;${msg.from==='doc'?'align-items:flex-start':'align-items:flex-end'}"><div class="bub ${msg.from==='doc'?'bin':'bout'}">${msg.text}</div><span style="font-size:9px;color:var(--nl);margin:1px 4px">${msg.time}</span></div>`).join('')}
+        </div>
+        <div style="padding:9px 11px;border-top:1px solid var(--gray);display:flex;gap:7px"><input class="inp" id="chat-input" placeholder="Message Dr. Kemi securely..." style="flex:1;height:40px;font-size:13px"><button onclick="sendMsg()" style="background:var(--p);border:none;width:40px;height:40px;border-radius:var(--rsm);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-send" style="font-size:16px"></i></button></div>
+      </div>
+      <h3 style="margin-bottom:11px">Lab Results &amp; Documents</h3>
+      <div class="card" style="margin-bottom:14px">
+        <div class="upz" style="margin-bottom:11px"><i class="ti ti-cloud-upload" style="font-size:28px;color:var(--p);margin-bottom:7px;display:block"></i><div style="font-size:13px;font-weight:600;color:var(--nm)">Upload Lab Results</div><div class="cap">PDF, JPG, PNG &middot; Max 10 MB</div></div>
+        <div style="display:flex;gap:9px;align-items:center;padding:9px;background:var(--bga);border-radius:var(--rsm)"><i class="ti ti-file-type-pdf" style="color:var(--err);font-size:21px"></i><div style="flex:1"><div style="font-size:12px;font-weight:600;color:var(--navy)">Blood_Test_June2026.pdf</div><div class="cap">28 Jun &middot; 1.2 MB</div></div><span class="badge bok" style="font-size:9px">Reviewed</span></div>
+      </div>
+      <div class="cteal">
+        <div style="display:flex;gap:11px;align-items:center;margin-bottom:11px"><i class="ti ti-calendar-event" style="color:var(--p);font-size:28px"></i><div><div style="font-size:13px;font-weight:700;color:var(--navy)">Next Consultation</div><div style="font-family:'Playfair Display',serif;font-size:15px;font-weight:800;color:var(--p)">20 July 2026 &middot; 10:00 AM</div><div class="cap">Video call &middot; Dr. Kemi Adeyemi</div></div></div>
+        <div style="display:flex;gap:7px"><button class="btn bp bsm" style="flex:1"><i class="ti ti-video"></i> Join Call</button><button class="btn bgh bsm" style="width:auto;padding:0 14px">Reschedule</button></div>
+      </div>
+    </div>
+  </div>`;
+}
+function sendMsg(){ const i=document.getElementById('chat-input'); if(!i||!i.value.trim())return; setState({chat:[...S.chat,{from:'user',text:i.value.trim(),time:'Now'}]}); }
+
+/* ==========================================================  SCREEN — PHARMACY  */
+function Pharmacy(){
+  return `<div>
+    <div style="padding:17px 19px;background:var(--bgc);border-bottom:1px solid var(--gray)"><h2 style="font-size:18px">Pharmacy</h2><p style="font-size:13px;margin-top:3px">NAFDAC-registered partner pharmacies &middot; Nationwide delivery</p></div>
+    <div class="sb">
+      <div class="cteal" style="margin-bottom:18px"><p class="ey" style="margin-bottom:5px">Prescription Status</p><div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:800;color:var(--navy);margin-bottom:4px">Awaiting Doctor Approval</div><p style="font-size:12px;color:var(--p);margin-bottom:11px">Prescription issued only after Dr. Kemi formally approves your treatment plan.</p><div class="prog plg" style="margin-bottom:7px"><div class="pf" style="width:40%"></div></div><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--p)"><span>Intake &#10003;</span><span>MD Review</span><span>Rx Issued</span><span>Dispensed</span></div></div>
+      <h3 style="margin-bottom:11px">Fulfilment Pipeline</h3>
+      <div class="tl" style="margin-bottom:18px">${[['var(--p)','Doctor Approval','Eligibility confirmed by your physician','Done'],['var(--warn)','Prescription Issued','Digital Rx sent to partner pharmacy','Pending'],['var(--gm)','Pharmacy Verification','Pharmacist verifies the Rx','Waiting'],['var(--gm)','Dispensing','Prepared &amp; quality-checked','Waiting'],['var(--gm)','Nationwide Delivery','Shipped to your registered address','Waiting']].map(([c,t,d,s])=>`<div class="tli"><div class="tld" style="background:${c}">${s==='Done'?'&#10003;':s==='Pending'?'&#9678;':'&#9675;'}</div><div style="flex:1;padding-top:2px"><div style="font-size:14px;font-weight:600;color:var(--navy)">${t}</div><div class="cap">${d}</div></div></div>`).join('')}</div>
+      <div class="card" style="margin-bottom:14px"><div style="display:flex;gap:9px;align-items:flex-start"><i class="ti ti-map-pin" style="color:var(--p);font-size:18px;flex-shrink:0;margin-top:1px"></i><div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--navy)">12 Adeola Odeku Street</div><div class="cap">Victoria Island, Lagos, 101241</div></div><button style="background:none;border:none;color:var(--p);font-size:12px;font-weight:700;cursor:pointer">Edit</button></div></div>
+      <div class="note nr" style="margin-bottom:18px"><i class="ti ti-alert-triangle" style="color:var(--err);font-size:15px;flex-shrink:0;margin-top:1px"></i><div><div style="font-size:13px;font-weight:700;color:var(--err);margin-bottom:3px">Report Side Effects</div><p style="font-size:12px;color:#7F1D1D;margin:0;line-height:1.6">Once your medication is dispensed, report any adverse effects immediately. Your doctor is notified instantly.</p><button class="btn bdr bxs" style="width:auto;padding:0 12px;margin-top:9px;opacity:.5;cursor:not-allowed">Report Issue</button></div></div>
+      <div style="background:var(--bga);border-radius:var(--rmd);padding:13px;border:1px solid var(--gray)"><p class="cap" style="line-height:1.75">WellBodyVital partners exclusively with NAFDAC-registered pharmacies across Nigeria. All medications are authentic, legally sourced, and dispensed only with a valid prescription from a licensed MDCN physician.</p></div>
+    </div>
+  </div>`;
+}
+
+/* ==========================================================  SCREEN — PROFILE  */
+function Profile(){
+  return `<div>
+    <div class="hg" style="padding:34px 19px 26px;text-align:center">
+      <div style="width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.18);border:2.5px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-family:'Playfair Display',serif;font-size:24px;font-weight:800;color:#fff">AO</div>
+      <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:800;color:#fff">Amara Okafor</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.58);margin-top:2px">amara@email.com &middot; Lagos</div>
+      <div style="display:flex;gap:7px;justify-content:center;margin-top:10px">
+        <span class="badge" style="background:rgba(255,255,255,.14);color:rgba(255,255,255,.82);border:1px solid rgba(255,255,255,.18)">Pro Plan</span>
+        <span class="badge" style="background:rgba(255,255,255,.14);color:rgba(255,255,255,.82);border:1px solid rgba(255,255,255,.18)">Since Jun 2026</span>
+      </div>
+    </div>
+    <div class="sb">
+      ${[{s:'Account',items:[['ti-user-edit','Edit Profile','Update personal information'],['ti-lock','Change Password','Last changed: never'],['ti-phone','Phone Number','+234 800 123 4567'],['ti-map-pin','Delivery Address','Victoria Island, Lagos']]},{s:'Health &amp; Medical',items:[['ti-clipboard-list','Wellness Questionnaire','View or update responses'],['ti-report-medical','Medical Records','Lab results and documents'],['ti-heart','Emergency Contact','Chidi Okafor &middot; Spouse']]},{s:'Subscription &amp; Billing',items:[['ti-credit-card','Active Subscription','Pro &middot; &#8358;35,000/month'],['ti-receipt','Payment History','Invoices and receipts'],['ti-wallet','Wallet Balance','&#8358;42,500 available'],['ti-arrow-up-circle','Upgrade Plan','Switch to Premium']]},{s:'Notifications &amp; Preferences',items:[['ti-bell','Notification Settings','Wellness alerts &amp; reminders'],['ti-mail','Email Preferences','Weekly updates, reports']]},{s:'Support &amp; Legal',items:[['ti-headset','Contact Support','Chat with our team'],['ti-help-circle','Help &amp; FAQs','Common questions'],['ti-shield','Privacy Policy','NDPR-compliant data handling'],['ti-file-text','Terms of Service','Platform usage terms'],['ti-certificate','Medical Disclaimer','Healthcare legal notices']]}].map(g=>`<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--nl);margin-bottom:8px">${g.s}</div><div class="card" style="padding:0;overflow:hidden;margin-bottom:14px">${g.items.map(([ic,t,s],i)=>`<div style="display:flex;gap:11px;align-items:center;padding:13px 15px;${i<g.items.length-1?'border-bottom:1px solid var(--bga)':''};cursor:pointer"><i class="ti ${ic}" style="color:var(--p);font-size:17px;flex-shrink:0"></i><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--navy)">${t}</div><div class="cap">${s}</div></div><i class="ti ti-chevron-right" style="color:var(--gm);font-size:13px"></i></div>`).join('')}</div>`).join('')}
+      <button class="btn bdr" style="margin-bottom:0" onclick="go('landing')"><i class="ti ti-logout"></i> Sign Out</button>
+    </div>
+    <!-- Profile uses the shared dark site footer -->
+    ${SiteFooter()}
+  </div>`;
+}
+
+/* ==========================================================  SCREEN — NOTIFICATIONS  */
+function Notifications(){
+  const ns=[{ic:'ti-stethoscope',bg:'var(--il)',c:'var(--inf)',t:'Dr. Kemi sent you a message',d:'Tap to read the consultation note',time:'2 min ago',u:true},{ic:'ti-clipboard-check',bg:'var(--okl)',c:'var(--ok)',t:'Wellness intake reviewed',d:'Your questionnaire was submitted successfully',time:'1 hr ago',u:true},{ic:'ti-pill',bg:'#EDE9FE',c:'#5B21B6',t:'Prescription update',d:'GLP-1 eligibility screening is in progress',time:'3 hrs ago',u:false},{ic:'ti-credit-card',bg:'var(--cl)',c:'var(--cd)',t:'Payment successful',d:'&#8358;35,000 charged &middot; Pro Plan &middot; Receipt emailed',time:'Yesterday',u:false},{ic:'ti-trending-down',bg:'var(--okl)',c:'var(--ok)',t:'Wellness milestone!',d:'You have lost 3.5 kg — excellent progress!',time:'6 July',u:false}];
+  return `<div>${TopBar('Notifications','dashboard')}<div style="padding:0 19px"><div style="height:8px"></div>${ns.map(n=>`<div style="display:flex;gap:11px;align-items:flex-start;padding:13px 0;border-bottom:1px solid var(--bga);cursor:pointer"><div style="width:40px;height:40px;border-radius:11px;background:${n.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${n.ic}" style="color:${n.c};font-size:19px"></i></div><div style="flex:1"><div style="font-size:13px;font-weight:${n.u?700:600};color:var(--navy);margin-bottom:1px">${n.t}</div><div class="cap">${n.d}</div><div style="font-size:9px;color:var(--nl);margin-top:3px">${n.time}</div></div>${n.u?`<div style="width:8px;height:8px;border-radius:50%;background:var(--coral);flex-shrink:0;margin-top:5px;border:1.5px solid var(--bgc)"></div>`:''}</div>`).join('')}<div style="height:24px"></div></div></div>`;
+}
+
+/* ==========================================================  MODAL  */
+function renderModal(){
+  const ex=document.querySelector('.overlay'); if(ex) ex.remove(); if(!S.modal) return;
+  const el=document.createElement('div'); el.className='overlay';
+  el.onclick=e=>{ if(e.target===el) setState({modal:null}); };
+  const NM={starter:'Starter',pro:'Pro',premium:'Premium'};
+  if(S.modal==='pay_ok'){
+    el.innerHTML=`<div class="sheet"><div class="handle"></div><div style="text-align:center;padding:6px 0 14px"><div style="width:68px;height:68px;background:var(--okl);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px"><i class="ti ti-check" style="color:var(--ok);font-size:34px"></i></div><h2 style="margin-bottom:5px">Payment Successful!</h2><p style="font-size:13px;margin-bottom:3px">Your ${NM[S.plan]} Wellness Plan is now active.</p><p class="cap" style="margin-bottom:18px">Receipt sent to amara@email.com</p><div class="cteal" style="text-align:left;margin-bottom:18px"><div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:9px">What happens next?</div>${['Complete your 5-step wellness questionnaire','A licensed physician will be assigned within 2 hours','Your consultation appointment will be scheduled shortly'].map(t=>`<div style="display:flex;gap:7px;align-items:flex-start;margin-bottom:8px"><i class="ti ti-arrow-right" style="color:var(--p);font-size:15px;flex-shrink:0;margin-top:1px"></i><span style="font-size:13px;color:var(--navy)">${t}</span></div>`).join('')}</div><button class="btn bp" onclick="setState({modal:null})"><i class="ti ti-clipboard-list"></i> Complete Wellness Questionnaire</button></div></div>`;
+  } else if(S.modal==='book'){
+    el.innerHTML=`<div class="sheet"><div class="handle"></div><h2 style="margin-bottom:15px">Book Consultation</h2><div class="fi"><label class="fl">Consultation Type</label><select class="inp"><option>Video Call (30 min)</option><option>Chat Consultation</option><option>Follow-up Review</option></select></div><div class="fi"><label class="fl">Preferred Date</label><input class="inp" type="date" value="2026-07-20"></div><div class="fi"><label class="fl">Preferred Time</label><select class="inp"><option>9:00 AM</option><option selected>10:00 AM</option><option>11:00 AM</option><option>2:00 PM</option><option>4:00 PM</option></select></div><div class="fi"><label class="fl">Reason for Visit</label><textarea class="inp" rows="3" placeholder="Brief description of what you'd like to discuss..."></textarea></div><button class="btn bp" style="margin-bottom:10px" onclick="setState({modal:null})"><i class="ti ti-calendar-check"></i> Confirm Booking</button><button class="btn bo" onclick="setState({modal:null})">Cancel</button></div>`;
+  }
+  document.getElementById('app').appendChild(el);
+}
+
+/* ==========================================================  RENDER ROUTER  */
+const PAGE_TITLES = {
+  landing:'WellBodyVital – Feel Better. Every Day. | Wellness & Metabolic Health Nigeria',
+  signup:'Create Your Account | WellBodyVital',
+  login:'Log In | WellBodyVital',
+  onboarding:'Your Wellness Profile | WellBodyVital',
+  plans:'Wellness Plans & Pricing | WellBodyVital Nigeria',
+  payment:'Secure Payment | WellBodyVital',
+  questionnaire:'Your Wellness Intake | WellBodyVital',
+  dashboard:'My Wellness Dashboard | WellBodyVital',
+  progress:'Progress Tracker | WellBodyVital',
+  doctor:'Doctor Consultation | WellBodyVital',
+  pharmacy:'Pharmacy & Medication Delivery | WellBodyVital',
+  profile:'My Account & Settings | WellBodyVital',
+  notifications:'Notifications | WellBodyVital',
+};
+
+function render(){
+  const el=document.getElementById('screen'); if(!el) return;
+  const views={landing:Landing,login:Auth,signup:Auth,onboarding:Onboarding,plans:Plans,payment:Payment,questionnaire:Questionnaire,dashboard:Dashboard,progress:Progress,doctor:Doctor,pharmacy:Pharmacy,profile:Profile,notifications:Notifications};
+  el.innerHTML=(views[S.screen]||Landing)();
+  if(PAGE_TITLES[S.screen]) document.title=PAGE_TITLES[S.screen];
+  /* Auto-update copyright year — never needs manual editing */
+  const yr = new Date().getFullYear();
+  document.querySelectorAll('.wbv-year').forEach(el=>el.textContent=yr);
+  renderModal();
+}
+
+document.addEventListener('DOMContentLoaded',()=>{ render(); document.getElementById('bottom-nav').style.display='none'; });
+</script>
+</body>
+</html>

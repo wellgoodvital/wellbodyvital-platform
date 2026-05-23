@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en-NG">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WellBodyVital Back Office</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.29.0/dist/tabler-icons.min.css">
+<style>
+:root {
+  --teal:#0F766E;
+  --teal-dark:#0A4540;
+  --mint:#D1FAE5;
+  --coral:#FF7A59;
+  --gold:#B58A35;
+  --ink:#0F172A;
+  --muted:#64748B;
+  --line:#E2E8F0;
+  --paper:#FFFFFF;
+  --soft:#F8FAFC;
+  --soft-2:#F1F5F9;
+  --ok:#059669;
+  --warn:#D97706;
+  --bad:#DC2626;
+  --info:#0369A1;
+  --radius:8px;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0;
+  font-family:'DM Sans', system-ui, -apple-system, sans-serif;
+  color:var(--ink);
+  background:var(--soft);
+}
+button, input, select, textarea { font:inherit; }
+button { cursor:pointer; }
+.login-shell {
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:1.1fr .9fr;
+  background:
+    linear-gradient(135deg, rgba(10,69,64,.96), rgba(15,118,110,.94)),
+    #0A4540;
+}
+.login-brand {
+  padding:52px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  color:#fff;
+}
+.login-card {
+  min-height:100vh;
+  background:#fff;
+  padding:48px;
+  display:flex;
+  align-items:center;
+}
+.login-card-inner { width:100%; max-width:420px; margin:0 auto; }
+.logo-dark {
+  width:280px;
+  max-width:80%;
+  mix-blend-mode:screen;
+  display:block;
+}
+.logo-light {
+  width:220px;
+  max-width:80%;
+  display:block;
+}
+h1 { font-size:48px; line-height:1.04; margin:34px 0 16px; letter-spacing:0; }
+h2 { font-size:24px; margin:0 0 8px; letter-spacing:0; }
+h3 { font-size:15px; margin:0; }
+p { color:var(--muted); line-height:1.55; }
+.demo-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; margin-top:24px; }
+.demo {
+  background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:var(--radius);
+  padding:12px;
+  color:rgba(255,255,255,.78);
+  font-size:12px;
+}
+.demo strong { color:#fff; display:block; margin-bottom:3px; }
+.field { margin-bottom:14px; }
+.label { display:block; font-size:12px; font-weight:700; color:#334155; margin-bottom:6px; }
+.input, .select, .textarea {
+  width:100%;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:#fff;
+  min-height:44px;
+  padding:0 12px;
+  color:var(--ink);
+  outline:none;
+}
+.textarea { padding:11px 12px; min-height:88px; resize:vertical; }
+.input:focus, .select:focus, .textarea:focus { border-color:var(--teal); box-shadow:0 0 0 3px rgba(15,118,110,.12); }
+.btn {
+  min-height:40px;
+  border:0;
+  border-radius:var(--radius);
+  display:inline-flex;
+  gap:8px;
+  align-items:center;
+  justify-content:center;
+  padding:0 14px;
+  font-weight:700;
+  background:var(--soft-2);
+  color:var(--ink);
+}
+.btn.primary { background:var(--teal); color:#fff; }
+.btn.coral { background:var(--coral); color:#fff; }
+.btn.ghost { background:#fff; border:1px solid var(--line); color:var(--ink); }
+.btn.danger { background:#FEE2E2; color:var(--bad); }
+.btn.small { min-height:32px; font-size:12px; padding:0 10px; }
+.error { display:none; color:var(--bad); background:#FEF2F2; border:1px solid #FECACA; padding:10px; border-radius:var(--radius); font-size:13px; margin-bottom:14px; }
+.app-shell { display:none; min-height:100vh; }
+.sidebar {
+  width:276px;
+  background:#071F1D;
+  color:#fff;
+  position:fixed;
+  inset:0 auto 0 0;
+  padding:22px 16px;
+  overflow-y:auto;
+}
+.brand-block {
+  padding:10px 8px 22px;
+  border-bottom:1px solid rgba(255,255,255,.09);
+  margin-bottom:18px;
+}
+.nav-group-label {
+  color:rgba(255,255,255,.45);
+  font-size:10px;
+  text-transform:uppercase;
+  font-weight:800;
+  letter-spacing:1px;
+  margin:20px 10px 8px;
+}
+.nav-btn {
+  width:100%;
+  border:0;
+  background:transparent;
+  color:rgba(255,255,255,.7);
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:11px 12px;
+  border-radius:var(--radius);
+  text-align:left;
+  margin-bottom:3px;
+  font-size:14px;
+  font-weight:700;
+}
+.nav-btn i { font-size:18px; }
+.nav-btn.active, .nav-btn:hover { color:#fff; background:rgba(255,255,255,.1); }
+.main { margin-left:276px; min-height:100vh; }
+.topbar {
+  height:72px;
+  background:#fff;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 28px;
+  position:sticky;
+  top:0;
+  z-index:20;
+}
+.page { padding:26px 28px 44px; }
+.page-head {
+  display:flex;
+  justify-content:space-between;
+  gap:16px;
+  align-items:flex-start;
+  margin-bottom:20px;
+}
+.eyebrow {
+  color:var(--teal);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  margin-bottom:5px;
+}
+.grid { display:grid; gap:14px; }
+.stats { grid-template-columns:repeat(4, minmax(0, 1fr)); }
+.two { grid-template-columns:1.2fr .8fr; }
+.three { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+.card {
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:16px;
+  box-shadow:0 1px 3px rgba(15,23,42,.04);
+}
+.stat-label { color:var(--muted); font-size:12px; font-weight:700; margin-bottom:6px; }
+.stat-value { font-size:28px; font-weight:800; letter-spacing:0; }
+.stat-sub { color:var(--muted); font-size:12px; margin-top:4px; }
+.toolbar {
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+}
+.table-wrap { overflow:auto; border:1px solid var(--line); border-radius:var(--radius); background:#fff; }
+table { width:100%; border-collapse:collapse; min-width:760px; }
+th, td { text-align:left; padding:12px 14px; border-bottom:1px solid var(--line); font-size:13px; vertical-align:top; }
+th { background:var(--soft-2); color:#475569; font-size:11px; text-transform:uppercase; letter-spacing:.6px; }
+tr:last-child td { border-bottom:0; }
+.badge {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  border-radius:999px;
+  padding:4px 9px;
+  font-size:11px;
+  font-weight:800;
+  white-space:nowrap;
+}
+.badge.ok { background:#D1FAE5; color:#047857; }
+.badge.warn { background:#FEF3C7; color:#B45309; }
+.badge.bad { background:#FEE2E2; color:#B91C1C; }
+.badge.info { background:#E0F2FE; color:#0369A1; }
+.badge.gray { background:#F1F5F9; color:#475569; }
+.actions { display:flex; gap:6px; flex-wrap:wrap; }
+.tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+.tab {
+  border:1px solid var(--line);
+  background:#fff;
+  border-radius:var(--radius);
+  padding:9px 12px;
+  font-weight:800;
+  color:#475569;
+}
+.tab.active { background:var(--teal); border-color:var(--teal); color:#fff; }
+.panel-title { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+.list { display:grid; gap:10px; }
+.item {
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:12px;
+  background:#fff;
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+}
+.item p { margin:4px 0 0; font-size:12px; }
+.chart-bars { display:flex; align-items:end; gap:10px; height:190px; padding-top:12px; }
+.bar {
+  flex:1;
+  background:linear-gradient(180deg, var(--teal), #14B8A6);
+  border-radius:6px 6px 0 0;
+  min-height:18px;
+  position:relative;
+}
+.bar span {
+  position:absolute;
+  bottom:-24px;
+  left:50%;
+  transform:translateX(-50%);
+  color:var(--muted);
+  font-size:11px;
+}
+.toast {
+  position:fixed;
+  right:22px;
+  bottom:22px;
+  background:var(--ink);
+  color:#fff;
+  border-radius:var(--radius);
+  padding:12px 14px;
+  font-size:13px;
+  display:none;
+  z-index:80;
+}
+.mobile-menu { display:none; }
+@media (max-width: 980px) {
+  .login-shell { grid-template-columns:1fr; }
+  .login-brand { min-height:42vh; padding:28px; }
+  .login-card { min-height:auto; padding:28px; }
+  h1 { font-size:36px; }
+  .sidebar { transform:translateX(-100%); transition:transform .2s; z-index:60; }
+  .sidebar.open { transform:translateX(0); }
+  .main { margin-left:0; }
+  .mobile-menu { display:inline-flex; }
+  .stats, .two, .three { grid-template-columns:1fr; }
+  .page { padding:20px 16px 36px; }
+  .topbar { padding:0 16px; }
+  .page-head { flex-direction:column; }
+}
+</style>
+</head>
+<body>
+<section id="login" class="login-shell">
+  <div class="login-brand">
+    <div>
+      <img src="/logo-dark.png" alt="WellBodyVital" class="logo-dark">
+      <h1>Medical operations, payments, and compliance in one secure back office.</h1>
+      <p style="color:rgba(255,255,255,.72);max-width:660px">Built for Nigeria-focused medical weight loss subscriptions: MDCN doctors, PCN pharmacies, NDPR privacy controls, secure messaging, prescriptions, payouts, and audit-ready workflows.</p>
+    </div>
+    <div class="demo-grid">
+      <div class="demo"><strong>Super Admin</strong>super@wellbodyvital.com</div>
+      <div class="demo"><strong>Operations</strong>ops@wellbodyvital.com</div>
+      <div class="demo"><strong>Doctor</strong>doctor@wellbodyvital.com</div>
+      <div class="demo"><strong>Pharmacy</strong>pharmacy@wellbodyvital.com</div>
+    </div>
+  </div>
+  <div class="login-card">
+    <div class="login-card-inner">
+      <img src="/logo-light.png" alt="WellBodyVital" class="logo-light" style="margin-bottom:28px">
+      <h2>Sign in</h2>
+      <p style="margin-top:0">Use any demo account. Password is <strong>password123</strong>.</p>
+      <div id="loginError" class="error"></div>
+      <form id="loginForm">
+        <div class="field">
+          <label class="label" for="email">Email</label>
+          <input class="input" id="email" type="email" value="super@wellbodyvital.com" autocomplete="username">
+        </div>
+        <div class="field">
+          <label class="label" for="password">Password</label>
+          <input class="input" id="password" type="password" value="password123" autocomplete="current-password">
+        </div>
+        <button class="btn primary" style="width:100%" type="submit"><i class="ti ti-login"></i> Open Back Office</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<section id="app" class="app-shell">
+  <aside id="sidebar" class="sidebar">
+    <div class="brand-block">
+      <img src="/logo-dark.png" alt="WellBodyVital" class="logo-dark" style="width:210px">
+      <p id="roleLabel" style="color:rgba(255,255,255,.55);font-size:12px;margin:12px 8px 0"></p>
+    </div>
+    <div class="nav-group-label">Workspace</div>
+    <button class="nav-btn active" data-view="dashboard"><i class="ti ti-layout-dashboard"></i> Dashboard</button>
+    <button class="nav-btn" data-view="users" data-roles="super_admin,operations"><i class="ti ti-users"></i> Users</button>
+    <button class="nav-btn" data-view="verification" data-roles="super_admin,operations"><i class="ti ti-shield-check"></i> Verification</button>
+    <button class="nav-btn" data-view="subscriptions" data-roles="super_admin,operations"><i class="ti ti-credit-card"></i> Subscriptions</button>
+    <button class="nav-btn" data-view="care"><i class="ti ti-stethoscope"></i> Care Review</button>
+    <button class="nav-btn" data-view="pharmacy"><i class="ti ti-pill"></i> Pharmacy Ops</button>
+    <button class="nav-btn" data-view="payments" data-roles="super_admin,operations"><i class="ti ti-wallet"></i> Payments & Payouts</button>
+    <button class="nav-btn" data-view="support" data-roles="super_admin,operations"><i class="ti ti-headset"></i> Support</button>
+    <button class="nav-btn" data-view="reports" data-roles="super_admin,operations"><i class="ti ti-file-export"></i> Reports</button>
+    <button class="nav-btn" data-view="settings" data-roles="super_admin"><i class="ti ti-settings"></i> Settings</button>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn ghost small mobile-menu" id="menuBtn" type="button"><i class="ti ti-menu-2"></i></button>
+        <div>
+          <div id="pageTitle" style="font-size:18px;font-weight:800">Dashboard</div>
+          <div id="pageSub" style="font-size:12px;color:var(--muted)">Operational command center</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span id="userChip" class="badge gray"></span>
+        <button class="btn ghost small" id="logoutBtn" type="button"><i class="ti ti-logout"></i> Logout</button>
+      </div>
+    </header>
+    <div id="page" class="page"></div>
+  </main>
+</section>
+<div id="toast" class="toast"></div>
+
+<script>
+const state = {
+  token: localStorage.getItem('wbvToken') || '',
+  user: null,
+  view: 'dashboard',
+  data: null,
+};
+
+const titles = {
+  dashboard: ['Dashboard', 'Operational command center'],
+  users: ['Users', 'Patients, admins, doctors, and pharmacies'],
+  verification: ['Verification', 'Credential review and provider activation'],
+  subscriptions: ['Subscriptions', 'Plans, pricing, renewals, and failed payments'],
+  care: ['Care Review', 'Intake, medical decisions, messages, prescriptions'],
+  pharmacy: ['Pharmacy Ops', 'Inventory, cold chain, fulfillment, refills'],
+  payments: ['Payments & Payouts', 'Revenue, consultation fees, pharmacy payouts'],
+  support: ['Support', 'Tickets, escalations, refunds, notifications'],
+  reports: ['Reports', 'Audit logs, exports, compliance evidence'],
+  settings: ['Settings', 'Platform controls'],
+};
+
+function api(path, options = {}) {
+  return fetch(path, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(state.token ? { Authorization: `Bearer ${state.token}` } : {}),
+      ...(options.headers || {}),
+    },
+  }).then(async (res) => {
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(body.error || res.statusText);
+    }
+    return res.json();
+  });
+}
+
+function formatNaira(value) {
+  return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(value || 0);
+}
+
+function dateShort(value) {
+  return value ? new Date(value).toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' }) : 'Not set';
+}
+
+function badge(status) {
+  const normalized = String(status || 'unknown').toLowerCase();
+  let tone = 'gray';
+  if (['active', 'paid', 'approved', 'verified', 'delivered', 'closed'].includes(normalized)) tone = 'ok';
+  if (['pending', 'pending_verification', 'under_review', 'processing', 'draft', 'past_due', 'prescription_received'].includes(normalized)) tone = 'warn';
+  if (['failed', 'rejected', 'refunded', 'failed_delivery', 'disabled'].includes(normalized)) tone = 'bad';
+  if (['assigned', 'scheduled', 'submitted', 'packed', 'out_for_delivery'].includes(normalized)) tone = 'info';
+  return `<span class="badge ${tone}">${String(status || 'unknown').replaceAll('_', ' ')}</span>`;
+}
+
+function roleName(role) {
+  return String(role || '').replaceAll('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function allowedFor(button) {
+  const roles = button.dataset.roles;
+  return !roles || roles.split(',').includes(state.user.role) || state.user.role === 'super_admin';
+}
+
+function toast(message) {
+  const el = document.getElementById('toast');
+  el.textContent = message;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 2600);
+}
+
+function usersById() {
+  return Object.fromEntries((state.data?.users || []).map((user) => [user.id, user]));
+}
+
+async function refresh() {
+  if (['doctor'].includes(state.user.role)) {
+    const [doctor, admin] = await Promise.all([
+      api('/api/doctor/dashboard'),
+      api('/api/admin/dashboard').catch(() => null),
+    ]);
+    state.data = admin || { stats:{}, users: doctor.patients, consultations: doctor.consultations, messages: doctor.messages, payouts: doctor.payouts, prescriptions: doctor.prescriptions, credentials:[], orders:[], payments:[], subscriptions:[], plans:[], auditLogs:[] };
+    state.provider = doctor;
+  } else if (['pharmacy'].includes(state.user.role)) {
+    const pharmacy = await api('/api/pharmacy/dashboard');
+    state.data = { stats:{}, users:[], consultations:[], messages:[], payouts: pharmacy.payouts, prescriptions: pharmacy.prescriptions, credentials:[], orders: pharmacy.orders, inventory: pharmacy.inventory, payments:[], subscriptions:[], plans:[], auditLogs:[] };
+    state.provider = pharmacy;
+  } else {
+    state.data = await api('/api/admin/dashboard');
+  }
+  render();
+}
+
+function showApp() {
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('roleLabel').textContent = `${roleName(state.user.role)} workspace`;
+  document.getElementById('userChip').textContent = state.user.name;
+  document.querySelectorAll('.nav-btn').forEach((button) => {
+    button.style.display = allowedFor(button) ? 'flex' : 'none';
+  });
+  if (state.user.role === 'doctor') state.view = 'care';
+  if (state.user.role === 'pharmacy') state.view = 'pharmacy';
+  refresh();
+}
+
+function pageHead(actionHtml = '') {
+  return `<div class="page-head">
+    <div><div class="eyebrow">WellBodyVital</div><h2>${titles[state.view][0]}</h2><p style="margin:4px 0 0">${titles[state.view][1]}</p></div>
+    <div class="actions">${actionHtml}</div>
+  </div>`;
+}
+
+function statCard(label, value, sub, icon) {
+  return `<div class="card">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
+      <div><div class="stat-label">${label}</div><div class="stat-value">${value}</div><div class="stat-sub">${sub || ''}</div></div>
+      <div style="width:40px;height:40px;border-radius:8px;background:#ECFDF5;display:grid;place-items:center;color:var(--teal)"><i class="ti ${icon}"></i></div>
+    </div>
+  </div>`;
+}
+
+function renderDashboard() {
+  const stats = state.data.stats || {};
+  const recentAudits = (state.data.auditLogs || []).slice(0, 6);
+  const pendingDocs = (state.data.credentials || []).filter((doc) => doc.status === 'pending');
+  return `${pageHead('<button class="btn primary" onclick="downloadReport()"><i class="ti ti-download"></i> Export CSV</button>')}
+    <div class="grid stats">
+      ${statCard('Revenue', formatNaira(stats.revenue), 'Paid subscription revenue', 'ti-cash')}
+      ${statCard('Active Subs', stats.activeSubscriptions || 0, 'Current paying customers', 'ti-refresh')}
+      ${statCard('Pending Docs', stats.pendingCredentials || 0, 'Need verification', 'ti-file-check')}
+      ${statCard('Open Tickets', stats.openTickets || 0, 'Support queue', 'ti-headset')}
+    </div>
+    <div class="grid two" style="margin-top:14px">
+      <div class="card">
+        <div class="panel-title"><h3>Revenue Trend</h3><span class="badge ok">Live model</span></div>
+        <div class="chart-bars">
+          ${[36, 52, 44, 68, 81, 93].map((h, i) => `<div class="bar" style="height:${h}%"><span>${['Jan','Feb','Mar','Apr','May','Jun'][i]}</span></div>`).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="panel-title"><h3>Verification Queue</h3><span class="badge warn">${pendingDocs.length} pending</span></div>
+        <div class="list">
+          ${pendingDocs.slice(0, 5).map((doc) => `<div class="item"><div><strong>${doc.type}</strong><p>${usersById()[doc.ownerUserId]?.name || doc.ownerUserId}</p></div>${badge(doc.status)}</div>`).join('') || '<p>No pending credentials.</p>'}
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div class="panel-title"><h3>Sensitive Activity</h3><button class="btn ghost small" onclick="setView('reports')">View all</button></div>
+      <div class="table-wrap">${auditTable(recentAudits)}</div>
+    </div>`;
+}
+
+function userTable(users) {
+  return `<table><thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Contact</th><th>Created</th><th>Actions</th></tr></thead><tbody>
+    ${users.map((user) => `<tr>
+      <td><strong>${user.name}</strong><br><span style="color:var(--muted)">${user.id}</span></td>
+      <td>${roleName(user.role)}</td>
+      <td>${badge(user.status)}</td>
+      <td>${user.email}<br>${user.phone || ''}</td>
+      <td>${dateShort(user.createdAt)}</td>
+      <td><div class="actions">
+        <button class="btn ghost small" onclick="setUserStatus('${user.id}','active')">Activate</button>
+        <button class="btn danger small" onclick="setUserStatus('${user.id}','disabled')">Disable</button>
+      </div></td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
+function renderUsers() {
+  const users = state.data.users || [];
+  return `${pageHead()}
+    <div class="toolbar">
+      <button class="tab active" onclick="filterUsers('all', this)">All</button>
+      <button class="tab" onclick="filterUsers('patient', this)">Patients</button>
+      <button class="tab" onclick="filterUsers('doctor', this)">Doctors</button>
+      <button class="tab" onclick="filterUsers('pharmacy', this)">Pharmacies</button>
+      <button class="tab" onclick="filterUsers('operations', this)">Operations</button>
+    </div>
+    <div class="table-wrap" id="usersTable">${userTable(users)}</div>`;
+}
+
+function renderVerification() {
+  const doctors = state.data.doctorProfiles || [];
+  const pharmacies = state.data.pharmacyProfiles || [];
+  const documents = state.data.credentials || [];
+  const userMap = usersById();
+  return `${pageHead()}
+    <div class="grid two">
+      <div class="card">
+        <div class="panel-title"><h3>Provider Approvals</h3><span class="badge warn">Admin gated</span></div>
+        <div class="list">
+          ${[...doctors.map((p) => ({ ...p, type:'doctor' })), ...pharmacies.map((p) => ({ ...p, type:'pharmacy' }))].map((profile) => {
+            const user = userMap[profile.userId] || {};
+            return `<div class="item">
+              <div><strong>${user.name}</strong><p>${roleName(profile.type)} · ${profile.specialty || profile.pcnNumber || ''}</p>${badge(profile.verificationStatus)}</div>
+              <div class="actions">
+                <button class="btn primary small" onclick="providerDecision('${profile.userId}','approve')">Approve</button>
+                <button class="btn danger small" onclick="providerDecision('${profile.userId}','reject')">Reject</button>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="panel-title"><h3>Credential Documents</h3><span class="badge info">${documents.length} files</span></div>
+        <div class="list">
+          ${documents.map((doc) => `<div class="item">
+            <div><strong>${doc.type}</strong><p>${userMap[doc.ownerUserId]?.name || doc.ownerUserId} · ${doc.fileName}</p>${badge(doc.status)}</div>
+            <div class="actions">
+              <button class="btn primary small" onclick="reviewDocument('${doc.id}','verified')">Verify</button>
+              <button class="btn danger small" onclick="reviewDocument('${doc.id}','rejected')">Reject</button>
+            </div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderSubscriptions() {
+  const plans = state.data.plans || [];
+  const subs = state.data.subscriptions || [];
+  const userMap = usersById();
+  const planMap = Object.fromEntries(plans.map((plan) => [plan.id, plan]));
+  return `${pageHead()}
+    <div class="grid two">
+      <div class="card">
+        <div class="panel-title"><h3>Plans & Pricing</h3><span class="badge ok">Editable by Super Admin</span></div>
+        <div class="table-wrap"><table><thead><tr><th>Plan</th><th>Price</th><th>Doctor Fee</th><th>Pharmacy Allocation</th><th>Status</th></tr></thead><tbody>
+          ${plans.map((plan) => `<tr><td><strong>${plan.name}</strong><br>${plan.features.slice(0, 2).join(', ')}</td><td>${formatNaira(plan.price)}</td><td>${formatNaira(plan.doctorFee)}</td><td>${formatNaira(plan.pharmacyAllocation)}</td><td>${badge(plan.status)}</td></tr>`).join('')}
+        </tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="panel-title"><h3>Active Subscriptions</h3><span class="badge info">${subs.length} total</span></div>
+        <div class="table-wrap"><table><thead><tr><th>Customer</th><th>Plan</th><th>Status</th><th>Next Billing</th></tr></thead><tbody>
+          ${subs.map((sub) => `<tr><td>${userMap[sub.userId]?.name || sub.userId}</td><td>${planMap[sub.planId]?.name || sub.planId}</td><td>${badge(sub.status)}</td><td>${dateShort(sub.nextBillingAt)}</td></tr>`).join('')}
+        </tbody></table></div>
+      </div>
+    </div>`;
+}
+
+function renderCare() {
+  const consultations = state.provider?.consultations || state.data.consultations || [];
+  const prescriptions = state.provider?.prescriptions || state.data.prescriptions || [];
+  const messages = state.provider?.messages || state.data.messages || [];
+  const userMap = usersById();
+  return `${pageHead(state.user.role === 'doctor' ? '<button class="btn primary" onclick="issueDemoPrescription()"><i class="ti ti-prescription"></i> Issue Demo Rx</button>' : '')}
+    <div class="grid three">
+      ${statCard('Consultations', consultations.length, 'Assigned clinical reviews', 'ti-stethoscope')}
+      ${statCard('Prescriptions', prescriptions.length, 'Drafts and issued Rx', 'ti-prescription')}
+      ${statCard('Messages', messages.length, 'Secure care messages', 'ti-message')}
+    </div>
+    <div class="grid two" style="margin-top:14px">
+      <div class="card">
+        <div class="panel-title"><h3>Consultation Queue</h3>${badge('medical audit trail')}</div>
+        <div class="table-wrap"><table><thead><tr><th>Patient</th><th>Status</th><th>Eligibility</th><th>Follow-up</th><th>Actions</th></tr></thead><tbody>
+          ${consultations.map((consult) => `<tr>
+            <td>${userMap[consult.patientId]?.name || consult.patientId}</td>
+            <td>${badge(consult.status)}</td>
+            <td>${badge(consult.eligibility)}</td>
+            <td>${dateShort(consult.followUpAt)}</td>
+            <td>${state.user.role === 'doctor' ? `<button class="btn primary small" onclick="doctorDecision('${consult.id}','approved')">Approve</button>` : '<span style="color:var(--muted)">Doctor only</span>'}</td>
+          </tr>`).join('')}
+        </tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="panel-title"><h3>Secure Messages</h3><button class="btn ghost small" onclick="sendDemoMessage()">Send</button></div>
+        <div class="list">
+          ${messages.slice(0, 6).map((msg) => `<div class="item"><div><strong>${userMap[msg.fromUserId]?.name || msg.fromUserId}</strong><p>${msg.text}</p></div><span style="font-size:11px;color:var(--muted)">${dateShort(msg.createdAt)}</span></div>`).join('') || '<p>No messages yet.</p>'}
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderPharmacy() {
+  const orders = state.provider?.orders || state.data.orders || [];
+  const inventory = state.provider?.inventory || state.data.inventory || [];
+  const prescriptions = state.provider?.prescriptions || state.data.prescriptions || [];
+  return `${pageHead(state.user.role === 'pharmacy' ? '<button class="btn primary" onclick="addInventory()"><i class="ti ti-plus"></i> Add Stock</button>' : '')}
+    <div class="grid three">
+      ${statCard('Orders', orders.length, 'Fulfillment queue', 'ti-package')}
+      ${statCard('Inventory', inventory.length, 'Medication SKUs', 'ti-building-store')}
+      ${statCard('Prescriptions', prescriptions.length, 'Assigned Rx', 'ti-pill')}
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div class="panel-title"><h3>Order Fulfillment</h3><span class="badge warn">Cold chain tracked</span></div>
+      <div class="table-wrap"><table><thead><tr><th>Order</th><th>Status</th><th>Cold Chain</th><th>Delivery Address</th><th>Actions</th></tr></thead><tbody>
+        ${orders.map((order) => `<tr>
+          <td><strong>${order.id}</strong><br>${order.prescriptionId}</td>
+          <td>${badge(order.status)}</td>
+          <td>${order.coldChainRequired ? badge(order.coldChainConfirmed ? 'confirmed' : 'pending') : badge('not required')}</td>
+          <td>${order.deliveryAddress}</td>
+          <td><div class="actions">
+            ${['processing','packed','out_for_delivery','delivered','failed_delivery'].map((status) => `<button class="btn ghost small" onclick="updateOrder('${order.id}','${status}')">${status.replaceAll('_',' ')}</button>`).join('')}
+          </div></td>
+        </tr>`).join('')}
+      </tbody></table></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div class="panel-title"><h3>Inventory</h3><span class="badge info">Availability sync</span></div>
+      <div class="table-wrap"><table><thead><tr><th>Medication</th><th>Qty</th><th>Cold Chain</th><th>NAFDAC Docs</th></tr></thead><tbody>
+        ${inventory.map((item) => `<tr><td>${item.medication}</td><td>${item.quantity}</td><td>${badge(item.coldChain ? 'required' : 'not required')}</td><td>${badge(item.nafdacDocStatus)}</td></tr>`).join('')}
+      </tbody></table></div>
+    </div>`;
+}
+
+function renderPayments() {
+  const payments = state.data.payments || [];
+  const payouts = state.data.payouts || [];
+  const userMap = usersById();
+  return `${pageHead()}
+    <div class="grid two">
+      <div class="card">
+        <div class="panel-title"><h3>Payments</h3><span class="badge ok">${formatNaira(payments.filter((p) => p.status === 'paid').reduce((s, p) => s + p.amount, 0))}</span></div>
+        <div class="table-wrap"><table><thead><tr><th>Reference</th><th>Customer</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+          ${payments.map((payment) => `<tr><td>${payment.reference}<br><span style="color:var(--muted)">${payment.channel}</span></td><td>${userMap[payment.userId]?.name || payment.userId}</td><td>${formatNaira(payment.amount)}</td><td>${badge(payment.status)}</td><td><button class="btn danger small" onclick="refund('${payment.id}')">Refund</button></td></tr>`).join('')}
+        </tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="panel-title"><h3>Payouts</h3><span class="badge warn">Doctor and pharmacy</span></div>
+        <div class="table-wrap"><table><thead><tr><th>Recipient</th><th>Role</th><th>Amount</th><th>Status</th><th>Due</th></tr></thead><tbody>
+          ${payouts.map((payout) => `<tr><td>${userMap[payout.recipientUserId]?.name || payout.recipientUserId}</td><td>${roleName(payout.role)}</td><td>${formatNaira(payout.amount)}</td><td>${badge(payout.status)}</td><td>${dateShort(payout.dueAt)}</td></tr>`).join('')}
+        </tbody></table></div>
+      </div>
+    </div>`;
+}
+
+function renderSupport() {
+  const tickets = state.data.supportTickets || [];
+  const userMap = usersById();
+  return `${pageHead('<button class="btn primary" onclick="toast(\'Notification queued for selected users\')"><i class="ti ti-send"></i> Send Notification</button>')}
+    <div class="card">
+      <div class="panel-title"><h3>Support Tickets</h3><span class="badge info">${tickets.length} tickets</span></div>
+      <div class="table-wrap"><table><thead><tr><th>Subject</th><th>User</th><th>Priority</th><th>Status</th><th>Escalated</th></tr></thead><tbody>
+        ${tickets.map((ticket) => `<tr><td><strong>${ticket.subject}</strong><br>${ticket.messages.join(' ')}</td><td>${userMap[ticket.userId]?.name || ticket.userId}</td><td>${badge(ticket.priority)}</td><td>${badge(ticket.status)}</td><td>${ticket.escalated ? badge('yes') : badge('no')}</td></tr>`).join('')}
+      </tbody></table></div>
+    </div>`;
+}
+
+function auditTable(rows) {
+  return `<table><thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead><tbody>
+    ${rows.map((log) => `<tr><td>${dateShort(log.createdAt)}</td><td>${roleName(log.actorRole)}<br><span style="color:var(--muted)">${log.actorUserId}</span></td><td>${log.action.replaceAll('_',' ')}</td><td>${log.entityType}<br>${log.entityId}</td><td>${JSON.stringify(log.details || {})}</td></tr>`).join('')}
+  </tbody></table>`;
+}
+
+function renderReports() {
+  return `${pageHead('<button class="btn primary" onclick="downloadReport()"><i class="ti ti-download"></i> Export CSV</button>')}
+    <div class="grid three">
+      ${statCard('Audit Rows', (state.data.auditLogs || []).length, 'Recent sensitive actions', 'ti-list-details')}
+      ${statCard('Consent Records', 'Tracked', 'Stored by user and version', 'ti-shield-lock')}
+      ${statCard('Prescription Trail', 'Enabled', 'Every Rx carries audit trail', 'ti-prescription')}
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div class="panel-title"><h3>Audit Logs</h3><span class="badge ok">Compliance evidence</span></div>
+      <div class="table-wrap">${auditTable(state.data.auditLogs || [])}</div>
+    </div>`;
+}
+
+function renderSettings() {
+  const settings = state.data.settings || {};
+  return `${pageHead()}
+    <div class="grid two">
+      <div class="card">
+        <h3 style="margin-bottom:14px">Platform Settings</h3>
+        <div class="field"><label class="label">Support Email</label><input id="supportEmail" class="input" value="${settings.supportEmail || ''}"></div>
+        <div class="field"><label class="label">Payout Day</label><input id="payoutDay" class="input" value="${settings.payoutDay || ''}"></div>
+        <div class="field"><label class="label">NDPR Retention Years</label><input id="retention" class="input" type="number" value="${settings.ndprRetentionYears || 7}"></div>
+        <button class="btn primary" onclick="saveSettings()">Save Settings</button>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:14px">Controls</h3>
+        <div class="item"><div><strong>Doctor Auto Assignment</strong><p>Keep manual while clinical ops mature.</p></div>${badge(settings.doctorAutoAssign ? 'enabled' : 'disabled')}</div>
+        <div class="item" style="margin-top:10px"><div><strong>Pharmacy Auto Assignment</strong><p>Assign manually while validating cold-chain partners.</p></div>${badge(settings.pharmacyAutoAssign ? 'enabled' : 'disabled')}</div>
+      </div>
+    </div>`;
+}
+
+function render() {
+  if (!state.data) return;
+  const title = titles[state.view] || titles.dashboard;
+  document.getElementById('pageTitle').textContent = title[0];
+  document.getElementById('pageSub').textContent = title[1];
+  document.querySelectorAll('.nav-btn').forEach((button) => button.classList.toggle('active', button.dataset.view === state.view));
+  const views = {
+    dashboard: renderDashboard,
+    users: renderUsers,
+    verification: renderVerification,
+    subscriptions: renderSubscriptions,
+    care: renderCare,
+    pharmacy: renderPharmacy,
+    payments: renderPayments,
+    support: renderSupport,
+    reports: renderReports,
+    settings: renderSettings,
+  };
+  document.getElementById('page').innerHTML = (views[state.view] || renderDashboard)();
+}
+
+function setView(view) {
+  state.view = view;
+  document.getElementById('sidebar').classList.remove('open');
+  render();
+}
+
+function filterUsers(role, button) {
+  document.querySelectorAll('.tab').forEach((tab) => tab.classList.remove('active'));
+  button.classList.add('active');
+  const users = role === 'all' ? state.data.users : state.data.users.filter((user) => user.role === role);
+  document.getElementById('usersTable').innerHTML = userTable(users);
+}
+
+async function setUserStatus(userId, status) {
+  await api(`/api/admin/users/${userId}/status`, { method:'PATCH', body: JSON.stringify({ status }) });
+  toast(`User ${status}`);
+  await refresh();
+}
+
+async function providerDecision(userId, decision) {
+  await api(`/api/admin/providers/${userId}/decision`, { method:'POST', body: JSON.stringify({ decision, reason: decision === 'reject' ? 'Credentials need resubmission' : '' }) });
+  toast(`Provider ${decision === 'approve' ? 'approved' : 'rejected'}`);
+  await refresh();
+}
+
+async function reviewDocument(documentId, status) {
+  await api(`/api/admin/documents/${documentId}/review`, { method:'POST', body: JSON.stringify({ status, notes: status === 'verified' ? 'Credential verified by admin.' : 'Document rejected.' }) });
+  toast(`Document ${status}`);
+  await refresh();
+}
+
+async function doctorDecision(consultationId, eligibility) {
+  await api(`/api/doctor/consultations/${consultationId}/decision`, { method:'POST', body: JSON.stringify({ eligibility, recommendation: 'Eligible for supervised metabolic care. Schedule follow-up and monitor side effects.' }) });
+  toast('Medical decision recorded');
+  await refresh();
+}
+
+async function issueDemoPrescription() {
+  const consult = (state.provider?.consultations || [])[0];
+  if (!consult) return toast('No consultation available');
+  await api('/api/doctor/prescriptions', { method:'POST', body: JSON.stringify({ patientId: consult.patientId, consultationId: consult.id, medication: 'Clinician supervised metabolic medication protocol', dosage: 'Start low and titrate per clinical response', pharmacyId: 'usr_pharmacy' }) });
+  toast('Prescription issued');
+  await refresh();
+}
+
+async function sendDemoMessage() {
+  const users = state.data.users || state.provider?.patients || [];
+  const patient = users.find((user) => user.role === 'patient') || users[0];
+  if (!patient) return toast('No patient recipient available');
+  await api('/api/messages', { method:'POST', body: JSON.stringify({ toUserId: patient.id, text: 'Your care team has updated your case. Please review your dashboard.' }) });
+  toast('Secure message sent');
+  await refresh();
+}
+
+async function updateOrder(orderId, status) {
+  await api(`/api/pharmacy/orders/${orderId}/status`, { method:'PATCH', body: JSON.stringify({ status, coldChainConfirmed: ['packed','out_for_delivery','delivered'].includes(status), proofOfFulfillmentUrl: status === 'delivered' ? '/uploads/proof/demo-fulfillment.pdf' : '' }) });
+  toast(`Order ${status.replaceAll('_',' ')}`);
+  await refresh();
+}
+
+async function addInventory() {
+  await api('/api/pharmacy/inventory', { method:'POST', body: JSON.stringify({ medication: 'Metformin XR', quantity: 40, coldChain: false, nafdacDocStatus: 'verified' }) });
+  toast('Inventory added');
+  await refresh();
+}
+
+async function refund(paymentId) {
+  await api('/api/admin/refunds', { method:'POST', body: JSON.stringify({ paymentId, reason: 'Operations refund review completed.' }) });
+  toast('Refund processed');
+  await refresh();
+}
+
+async function saveSettings() {
+  await api('/api/admin/settings', {
+    method:'PATCH',
+    body: JSON.stringify({
+      supportEmail: document.getElementById('supportEmail').value,
+      payoutDay: document.getElementById('payoutDay').value,
+      ndprRetentionYears: Number(document.getElementById('retention').value),
+    }),
+  });
+  toast('Settings saved');
+  await refresh();
+}
+
+function downloadReport() {
+  window.open('/api/admin/reports/export', '_blank');
+}
+
+document.getElementById('loginForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const error = document.getElementById('loginError');
+  error.style.display = 'none';
+  try {
+    const result = await api('/api/auth/login', {
+      method:'POST',
+      body: JSON.stringify({
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value,
+      }),
+    });
+    state.token = result.token;
+    state.user = result.user;
+    localStorage.setItem('wbvToken', state.token);
+    showApp();
+  } catch (err) {
+    error.textContent = err.message;
+    error.style.display = 'block';
+  }
+});
+
+document.querySelectorAll('.nav-btn').forEach((button) => {
+  button.addEventListener('click', () => setView(button.dataset.view));
+});
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await api('/api/auth/logout', { method:'POST' }).catch(() => {});
+  localStorage.removeItem('wbvToken');
+  window.location.reload();
+});
+
+document.getElementById('menuBtn').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+if (state.token) {
+  api('/api/auth/me').then((result) => {
+    state.user = result.user;
+    showApp();
+  }).catch(() => {
+    localStorage.removeItem('wbvToken');
+  });
+}
+</script>
+</body>
+</html>

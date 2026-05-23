@@ -1,0 +1,787 @@
+/**
+ * WellBodyVital Back Office + Customer API
+ * Nigeria-focused medical weight loss subscription platform.
+ *
+ * Run: npm start
+ */
+
+const crypto = require('crypto');
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const DB_PATH = path.join(__dirname, 'data', 'wbv-db.json');
+const sessions = new Map();
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use((req, res, next) => {
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
+
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '30d',
+  etag: true,
+}));
+
+function now() {
+  return new Date().toISOString();
+}
+
+function id(prefix) {
+  return `${prefix}_${crypto.randomBytes(5).toString('hex')}`;
+}
+
+function ensureDb() {
+  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+  if (!fs.existsSync(DB_PATH)) {
+    fs.writeFileSync(DB_PATH, JSON.stringify(seedData(), null, 2));
+  }
+}
+
+function readDb() {
+  ensureDb();
+  return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+}
+
+function writeDb(db) {
+  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
+}
+
+function publicUser(user) {
+  if (!user) return null;
+  const { password, ...safe } = user;
+  return safe;
+}
+
+function audit(db, actor, action, entityType, entityId, details = {}) {
+  db.auditLogs.unshift({
+    id: id('audit'),
+    actorUserId: actor?.id || 'system',
+    actorRole: actor?.role || 'system',
+    action,
+    entityType,
+    entityId,
+    details,
+    ip: details.ip || null,
+    createdAt: now(),
+  });
+}
+
+function auth(req, res, next) {
+  const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  const session = sessions.get(token);
+  if (!session) return res.status(401).json({ error: 'Authentication required' });
+  const db = readDb();
+  const user = db.users.find((item) => item.id === session.userId && item.status !== 'disabled');
+  if (!user) return res.status(401).json({ error: 'Session user not found' });
+  req.db = db;
+  req.user = user;
+  req.token = token;
+  next();
+}
+
+function allow(...roles) {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Insufficient role permissions' });
+    }
+    next();
+  };
+}
+
+function saveAndSend(req, res, payload, status = 200) {
+  writeDb(req.db);
+  res.status(status).json(payload);
+}
+
+function byId(collection, itemId) {
+  return collection.find((item) => item.id === itemId);
+}
+
+function money(amount) {
+  return Number(amount || 0);
+}
+
+function summaryStats(db) {
+  const successfulPayments = db.payments.filter((payment) => payment.status === 'paid');
+  const revenue = successfulPayments.reduce((sum, payment) => sum + money(payment.amount), 0);
+  const commission = successfulPayments.reduce((sum, payment) => sum + money(payment.platformCommission), 0);
+  const pendingCredentials = db.credentials.filter((doc) => doc.status === 'pending').length;
+  const activeSubscriptions = db.subscriptions.filter((sub) => sub.status === 'active').length;
+  return {
+    revenue,
+    commission,
+    activeSubscriptions,
+    users: db.users.length,
+    pendingCredentials,
+    openTickets: db.supportTickets.filter((ticket) => ticket.status !== 'closed').length,
+    prescriptionsAwaitingFulfillment: db.prescriptions.filter((rx) => rx.status === 'approved').length,
+  };
+}
+
+function seedData() {
+  const createdAt = now();
+  const users = [
+    { id: 'usr_super', role: 'super_admin', name: 'Ade WellBody', email: 'super@wellbodyvital.com', phone: '+2348000000001', status: 'active', password: 'password123', createdAt },
+    { id: 'usr_ops', role: 'operations', name: 'Operations Lead', email: 'ops@wellbodyvital.com', phone: '+2348000000002', status: 'active', password: 'password123', createdAt },
+    { id: 'usr_doctor', role: 'doctor', name: 'Dr. Kemi Adeyemi', email: 'doctor@wellbodyvital.com', phone: '+2348000000003', status: 'pending_verification', password: 'password123', createdAt },
+    { id: 'usr_pharmacy', role: 'pharmacy', name: 'MedPlus Lekki Pharmacy', email: 'pharmacy@wellbodyvital.com', phone: '+2348000000004', status: 'pending_verification', password: 'password123', createdAt },
+    { id: 'usr_patient', role: 'patient', name: 'Amara Okafor', email: 'patient@wellbodyvital.com', phone: '+2348000000005', status: 'active', password: 'password123', createdAt },
+    { id: 'usr_patient2', role: 'patient', name: 'Tunde Balogun', email: 'tunde@example.com', phone: '+2348000000006', status: 'active', password: 'password123', createdAt },
+  ];
+
+  const plans = [
+    { id: 'plan_starter', slug: 'starter', name: 'Starter', price: 15000, currency: 'NGN', billingCycle: 'monthly', doctorFee: 0, pharmacyAllocation: 0, platformCommissionRate: 0.18, status: 'active', features: ['Personalised meal plan', 'Custom fitness programme', 'Weekly coaching session', 'Supplement guidance', 'Progress tracking'] },
+    { id: 'plan_pro', slug: 'pro', name: 'Pro', price: 35000, currency: 'NGN', billingCycle: 'monthly', doctorFee: 10000, pharmacyAllocation: 0, platformCommissionRate: 0.20, status: 'active', features: ['Everything in Starter', 'Doctor consultation', 'Medical eligibility screening', 'Prescription access if approved', 'Priority support'] },
+    { id: 'plan_premium', slug: 'premium', name: 'Premium', price: 65000, currency: 'NGN', billingCycle: 'monthly', doctorFee: 15000, pharmacyAllocation: 25000, platformCommissionRate: 0.22, status: 'active', features: ['Everything in Pro', 'GLP-1 access if clinically eligible', 'NAFDAC pharmacy delivery', 'Monthly follow-up', 'Refill management'] },
+  ];
+
+  return {
+    users,
+    plans,
+    subscriptions: [
+      { id: 'sub_001', userId: 'usr_patient', planId: 'plan_pro', status: 'active', startedAt: createdAt, nextBillingAt: '2026-06-23T09:00:00.000Z', renewalCount: 2 },
+      { id: 'sub_002', userId: 'usr_patient2', planId: 'plan_premium', status: 'past_due', startedAt: createdAt, nextBillingAt: '2026-05-27T09:00:00.000Z', renewalCount: 1 },
+    ],
+    payments: [
+      { id: 'pay_001', userId: 'usr_patient', subscriptionId: 'sub_001', type: 'subscription', amount: 35000, currency: 'NGN', status: 'paid', channel: 'paystack', reference: 'WBV-2026-48291', doctorFee: 10000, pharmacyFee: 0, platformCommission: 7000, createdAt },
+      { id: 'pay_002', userId: 'usr_patient2', subscriptionId: 'sub_002', type: 'subscription', amount: 65000, currency: 'NGN', status: 'failed', channel: 'card', reference: 'WBV-2026-48292', doctorFee: 15000, pharmacyFee: 25000, platformCommission: 14300, createdAt },
+    ],
+    questionnaires: [
+      { id: 'q_001', userId: 'usr_patient', status: 'submitted', heightCm: 166, weightKg: 92, bmi: 33.4, goals: ['Lose 18kg', 'Improve energy', 'Lower cravings'], conditions: ['Hypertension'], medications: ['Amlodipine'], allergies: ['None'], submittedAt: createdAt },
+      { id: 'q_002', userId: 'usr_patient2', status: 'submitted', heightCm: 178, weightKg: 112, bmi: 35.3, goals: ['Reduce BMI', 'Improve sleep'], conditions: ['Prediabetes'], medications: [], allergies: ['Penicillin'], submittedAt: createdAt },
+    ],
+    doctorProfiles: [
+      { id: 'doc_prof_001', userId: 'usr_doctor', specialty: 'Endocrinology and metabolic medicine', mdcnNumber: 'MDCN/NG/452198', activePractice: true, verificationStatus: 'pending', approvedAt: null, rejectedReason: null, patientsAssigned: ['usr_patient'], consultationRate: 10000 },
+    ],
+    pharmacyProfiles: [
+      { id: 'pharm_prof_001', userId: 'usr_pharmacy', pcnNumber: 'PCN/LAG/204882', premisesLicense: 'LAG-PREM-98211', coldChainCertified: true, verificationStatus: 'pending', approvedAt: null, rejectedReason: null, coverageStates: ['Lagos', 'Ogun', 'Oyo'], fulfillmentFeeRate: 0.12 },
+    ],
+    credentials: [
+      { id: 'cred_001', ownerUserId: 'usr_doctor', ownerRole: 'doctor', type: 'MDCN license', fileName: 'mdcn-license-kemi.pdf', url: '/uploads/demo/mdcn-license-kemi.pdf', status: 'pending', reviewedBy: null, reviewedAt: null, notes: '', uploadedAt: createdAt },
+      { id: 'cred_002', ownerUserId: 'usr_doctor', ownerRole: 'doctor', type: 'Government ID', fileName: 'nin-kemi.pdf', url: '/uploads/demo/nin-kemi.pdf', status: 'pending', reviewedBy: null, reviewedAt: null, notes: '', uploadedAt: createdAt },
+      { id: 'cred_003', ownerUserId: 'usr_pharmacy', ownerRole: 'pharmacy', type: 'PCN license', fileName: 'pcn-medplus.pdf', url: '/uploads/demo/pcn-medplus.pdf', status: 'pending', reviewedBy: null, reviewedAt: null, notes: '', uploadedAt: createdAt },
+      { id: 'cred_004', ownerUserId: 'usr_pharmacy', ownerRole: 'pharmacy', type: 'Premises license', fileName: 'premises-medplus.pdf', url: '/uploads/demo/premises-medplus.pdf', status: 'pending', reviewedBy: null, reviewedAt: null, notes: '', uploadedAt: createdAt },
+    ],
+    consultations: [
+      { id: 'consult_001', patientId: 'usr_patient', doctorId: 'usr_doctor', questionnaireId: 'q_001', status: 'under_review', eligibility: 'pending', recommendation: '', followUpAt: '2026-05-30T10:00:00.000Z', sideEffects: [], createdAt },
+    ],
+    prescriptions: [
+      { id: 'rx_001', patientId: 'usr_patient', doctorId: 'usr_doctor', pharmacyId: 'usr_pharmacy', consultationId: 'consult_001', medication: 'Semaglutide starter protocol', dosage: 'Clinician supervised titration', status: 'draft', auditTrail: [{ at: createdAt, by: 'usr_doctor', action: 'draft_created' }], issuedAt: null },
+    ],
+    orders: [
+      { id: 'ord_001', patientId: 'usr_patient', prescriptionId: 'rx_001', pharmacyId: 'usr_pharmacy', status: 'prescription_received', coldChainRequired: true, coldChainConfirmed: false, deliveryAddress: 'Victoria Island, Lagos', proofOfFulfillmentUrl: '', updatedAt: createdAt },
+    ],
+    deliveries: [
+      { id: 'del_001', orderId: 'ord_001', courier: 'GIG Logistics', trackingCode: 'GIG-WBV-001', status: 'pending_pickup', deliveredAt: null, failedReason: null },
+    ],
+    messages: [
+      { id: 'msg_001', threadId: 'thread_usr_patient_usr_doctor', fromUserId: 'usr_doctor', toUserId: 'usr_patient', text: 'Please share your most recent blood pressure readings and fasting glucose if available.', secure: true, readAt: null, createdAt },
+    ],
+    notifications: [
+      { id: 'note_001', userId: 'usr_patient', type: 'doctor_message', title: 'Dr. Kemi sent you a message', body: 'Tap to read the consultation note.', read: false, createdAt },
+    ],
+    payouts: [
+      { id: 'payout_001', recipientUserId: 'usr_doctor', role: 'doctor', amount: 10000, currency: 'NGN', status: 'pending', sourcePaymentIds: ['pay_001'], dueAt: '2026-05-30T09:00:00.000Z', paidAt: null },
+      { id: 'payout_002', recipientUserId: 'usr_pharmacy', role: 'pharmacy', amount: 25000, currency: 'NGN', status: 'pending', sourcePaymentIds: [], dueAt: '2026-05-30T09:00:00.000Z', paidAt: null },
+    ],
+    supportTickets: [
+      { id: 'ticket_001', userId: 'usr_patient2', assignedTo: 'usr_ops', priority: 'high', subject: 'Failed card payment', status: 'open', messages: ['Customer card failed during Premium renewal.'], escalated: false, createdAt },
+    ],
+    inventory: [
+      { id: 'inv_001', pharmacyId: 'usr_pharmacy', medication: 'Semaglutide starter pens', quantity: 18, coldChain: true, nafdacDocStatus: 'verified', updatedAt: createdAt },
+      { id: 'inv_002', pharmacyId: 'usr_pharmacy', medication: 'Alcohol swabs', quantity: 250, coldChain: false, nafdacDocStatus: 'not_required', updatedAt: createdAt },
+    ],
+    consentRecords: [
+      { id: 'consent_001', userId: 'usr_patient', type: 'Medical Data Consent', version: '2026.1', accepted: true, acceptedAt: createdAt },
+      { id: 'consent_002', userId: 'usr_patient', type: 'Telehealth Consent', version: '2026.1', accepted: true, acceptedAt: createdAt },
+    ],
+    auditLogs: [
+      { id: 'audit_seed', actorUserId: 'system', actorRole: 'system', action: 'seed_created', entityType: 'database', entityId: 'wbv-db', details: { source: 'server bootstrap' }, ip: null, createdAt },
+    ],
+    settings: {
+      platformName: 'WellBodyVital',
+      country: 'Nigeria',
+      currency: 'NGN',
+      doctorAutoAssign: false,
+      pharmacyAutoAssign: false,
+      ndprRetentionYears: 7,
+      supportEmail: 'support@wellbodyvital.com',
+      payoutDay: 'Friday',
+    },
+  };
+}
+
+function providerDashboard(db, role, userId) {
+  if (role === 'doctor') {
+    const consultations = db.consultations.filter((item) => item.doctorId === userId);
+    const patientIds = [...new Set(consultations.map((item) => item.patientId))];
+    return {
+      profile: db.doctorProfiles.find((profile) => profile.userId === userId),
+      patients: db.users.filter((user) => patientIds.includes(user.id)).map(publicUser),
+      consultations,
+      messages: db.messages.filter((message) => message.fromUserId === userId || message.toUserId === userId),
+      payouts: db.payouts.filter((payout) => payout.recipientUserId === userId),
+      prescriptions: db.prescriptions.filter((rx) => rx.doctorId === userId),
+    };
+  }
+  const orders = db.orders.filter((order) => order.pharmacyId === userId);
+  return {
+    profile: db.pharmacyProfiles.find((profile) => profile.userId === userId),
+    prescriptions: db.prescriptions.filter((rx) => rx.pharmacyId === userId),
+    orders,
+    inventory: db.inventory.filter((item) => item.pharmacyId === userId),
+    payouts: db.payouts.filter((payout) => payout.recipientUserId === userId),
+  };
+}
+
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'backoffice.html'));
+});
+
+app.post('/api/auth/register', (req, res) => {
+  const db = readDb();
+  const role = req.body.role || 'patient';
+  const allowedRoles = ['patient', 'doctor', 'pharmacy'];
+  if (!allowedRoles.includes(role)) return res.status(400).json({ error: 'Unsupported self-registration role' });
+  if (db.users.some((user) => user.email.toLowerCase() === String(req.body.email || '').toLowerCase())) {
+    return res.status(409).json({ error: 'Email already registered' });
+  }
+  const user = {
+    id: id('usr'),
+    role,
+    name: req.body.name || `${req.body.firstName || ''} ${req.body.lastName || ''}`.trim() || 'New User',
+    email: req.body.email,
+    phone: req.body.phone || '',
+    status: role === 'patient' ? 'active' : 'pending_verification',
+    password: req.body.password || 'password123',
+    createdAt: now(),
+  };
+  db.users.push(user);
+  if (role === 'doctor') {
+    db.doctorProfiles.push({
+      id: id('doc_prof'),
+      userId: user.id,
+      specialty: req.body.specialty || '',
+      mdcnNumber: req.body.mdcnNumber || '',
+      activePractice: Boolean(req.body.activePractice),
+      verificationStatus: 'pending',
+      approvedAt: null,
+      rejectedReason: null,
+      patientsAssigned: [],
+      consultationRate: money(req.body.consultationRate || 10000),
+    });
+  }
+  if (role === 'pharmacy') {
+    db.pharmacyProfiles.push({
+      id: id('pharm_prof'),
+      userId: user.id,
+      pcnNumber: req.body.pcnNumber || '',
+      premisesLicense: req.body.premisesLicense || '',
+      coldChainCertified: Boolean(req.body.coldChainCertified),
+      verificationStatus: 'pending',
+      approvedAt: null,
+      rejectedReason: null,
+      coverageStates: req.body.coverageStates || [],
+      fulfillmentFeeRate: 0.12,
+    });
+  }
+  audit(db, user, 'register', 'user', user.id, { role });
+  writeDb(db);
+  res.status(201).json({ success: true, user: publicUser(user) });
+});
+
+app.post('/api/auth/login', (req, res) => {
+  const db = readDb();
+  const user = db.users.find((item) => item.email.toLowerCase() === String(req.body.email || '').toLowerCase());
+  if (!user || user.password !== req.body.password) return res.status(401).json({ error: 'Invalid email or password' });
+  const token = crypto.randomBytes(24).toString('hex');
+  sessions.set(token, { userId: user.id, createdAt: now() });
+  audit(db, user, 'login', 'user', user.id, { ip: req.ip });
+  writeDb(db);
+  res.json({ success: true, token, user: publicUser(user) });
+});
+
+app.post('/api/auth/logout', auth, (req, res) => {
+  sessions.delete(req.token);
+  audit(req.db, req.user, 'logout', 'user', req.user.id);
+  saveAndSend(req, res, { success: true });
+});
+
+app.get('/api/auth/me', auth, (req, res) => {
+  res.json({ user: publicUser(req.user) });
+});
+
+app.post('/api/auth/forgot', (req, res) => res.json({ success: true, message: 'Reset email queued when email service is connected' }));
+
+app.get('/api/schema', auth, allow('super_admin', 'operations'), (req, res) => {
+  res.json({
+    tables: Object.keys(req.db).filter((key) => Array.isArray(req.db[key])),
+    settings: Object.keys(req.db.settings),
+    note: 'The prototype uses data/wbv-db.json. The collections map directly to future SQL or document tables.',
+  });
+});
+
+app.get('/api/user/profile', auth, (req, res) => {
+  res.json({ user: publicUser(req.user), plan: 'pro' });
+});
+
+app.put('/api/user/profile', auth, (req, res) => {
+  Object.assign(req.user, {
+    name: req.body.name ?? req.user.name,
+    phone: req.body.phone ?? req.user.phone,
+  });
+  audit(req.db, req.user, 'profile_update', 'user', req.user.id);
+  saveAndSend(req, res, { success: true, user: publicUser(req.user) });
+});
+
+app.get('/api/plans', (req, res) => {
+  const db = readDb();
+  res.json({ plans: db.plans.filter((plan) => plan.status === 'active') });
+});
+
+app.post('/api/subscription', auth, (req, res) => {
+  const plan = byId(req.db.plans, req.body.planId) || req.db.plans.find((item) => item.slug === req.body.plan);
+  if (!plan) return res.status(404).json({ error: 'Plan not found' });
+  const subscription = {
+    id: id('sub'),
+    userId: req.user.id,
+    planId: plan.id,
+    status: 'active',
+    startedAt: now(),
+    nextBillingAt: new Date(Date.now() + 30 * 86400000).toISOString(),
+    renewalCount: 0,
+  };
+  req.db.subscriptions.push(subscription);
+  audit(req.db, req.user, 'subscription_created', 'subscription', subscription.id, { planId: plan.id });
+  saveAndSend(req, res, { success: true, subscription });
+});
+
+app.post('/api/payment/initiate', auth, (req, res) => {
+  const reference = `WBV-${Date.now()}`;
+  const payment = {
+    id: id('pay'),
+    userId: req.user.id,
+    subscriptionId: req.body.subscriptionId || null,
+    type: req.body.type || 'subscription',
+    amount: money(req.body.amount),
+    currency: req.body.currency || 'NGN',
+    status: 'pending',
+    channel: req.body.channel || 'paystack',
+    reference,
+    doctorFee: money(req.body.doctorFee),
+    pharmacyFee: money(req.body.pharmacyFee),
+    platformCommission: money(req.body.platformCommission),
+    createdAt: now(),
+  };
+  req.db.payments.push(payment);
+  audit(req.db, req.user, 'payment_initiated', 'payment', payment.id, { reference });
+  saveAndSend(req, res, { reference, payment });
+});
+
+app.post('/api/payment/verify', auth, (req, res) => {
+  const payment = req.db.payments.find((item) => item.reference === req.body.reference || item.id === req.body.paymentId);
+  if (!payment) return res.status(404).json({ error: 'Payment not found' });
+  payment.status = req.body.status || 'paid';
+  audit(req.db, req.user, 'payment_verified', 'payment', payment.id, { status: payment.status });
+  saveAndSend(req, res, { verified: payment.status === 'paid', payment });
+});
+
+app.post('/api/payment/webhook', (req, res) => {
+  const db = readDb();
+  const payment = db.payments.find((item) => item.reference === req.body.reference);
+  if (payment) payment.status = req.body.status || payment.status;
+  audit(db, null, 'payment_webhook_received', 'payment', payment?.id || req.body.reference || 'unknown', { provider: req.body.provider });
+  writeDb(db);
+  res.json({ received: true });
+});
+
+app.post('/api/questionnaire', auth, (req, res) => {
+  const questionnaire = {
+    id: id('q'),
+    userId: req.user.id,
+    status: 'submitted',
+    heightCm: money(req.body.heightCm),
+    weightKg: money(req.body.weightKg),
+    bmi: req.body.heightCm ? +(money(req.body.weightKg) / ((money(req.body.heightCm) / 100) ** 2)).toFixed(1) : null,
+    goals: req.body.goals || [],
+    conditions: req.body.conditions || [],
+    medications: req.body.medications || [],
+    allergies: req.body.allergies || [],
+    submittedAt: now(),
+  };
+  req.db.questionnaires.push(questionnaire);
+  audit(req.db, req.user, 'questionnaire_submitted', 'questionnaire', questionnaire.id);
+  saveAndSend(req, res, { submitted: true, questionnaire, doctorAssigned: 'Pending operations assignment' });
+});
+
+app.get('/api/questionnaire', auth, (req, res) => {
+  const questionnaire = req.db.questionnaires.find((item) => item.userId === req.user.id);
+  res.json({ completed: Boolean(questionnaire), questionnaire });
+});
+
+app.post('/api/documents/upload', auth, (req, res) => {
+  const document = {
+    id: id('cred'),
+    ownerUserId: req.body.ownerUserId || req.user.id,
+    ownerRole: req.body.ownerRole || req.user.role,
+    type: req.body.type || 'General document',
+    fileName: req.body.fileName || 'uploaded-document.pdf',
+    url: req.body.url || `/uploads/${Date.now()}-${req.body.fileName || 'document.pdf'}`,
+    status: 'pending',
+    reviewedBy: null,
+    reviewedAt: null,
+    notes: '',
+    uploadedAt: now(),
+  };
+  req.db.credentials.push(document);
+  audit(req.db, req.user, 'document_uploaded', 'credential', document.id, { type: document.type });
+  saveAndSend(req, res, { uploaded: true, document, url: document.url });
+});
+
+app.get('/api/documents', auth, (req, res) => {
+  const canReview = ['super_admin', 'operations'].includes(req.user.role);
+  const documents = canReview ? req.db.credentials : req.db.credentials.filter((doc) => doc.ownerUserId === req.user.id);
+  res.json({ documents });
+});
+
+app.get('/api/progress', auth, (req, res) => {
+  res.json({
+    weights: [{ date: '2026-05-01', kg: 92 }, { date: '2026-05-15', kg: 89.8 }, { date: '2026-05-23', kg: 88.5 }],
+    bmi: [{ date: '2026-05-01', value: 33.4 }, { date: '2026-05-23', value: 32.1 }],
+  });
+});
+
+app.post('/api/progress/log', auth, (req, res) => {
+  audit(req.db, req.user, 'progress_logged', 'user', req.user.id, { weightKg: req.body.weightKg });
+  saveAndSend(req, res, { logged: true });
+});
+
+app.get('/api/notifications', auth, (req, res) => {
+  res.json({ notifications: req.db.notifications.filter((note) => note.userId === req.user.id) });
+});
+
+app.get('/api/messages', auth, (req, res) => {
+  res.json({ messages: req.db.messages.filter((msg) => msg.fromUserId === req.user.id || msg.toUserId === req.user.id) });
+});
+
+app.post('/api/messages', auth, (req, res) => {
+  const message = {
+    id: id('msg'),
+    threadId: req.body.threadId || `thread_${req.user.id}_${req.body.toUserId}`,
+    fromUserId: req.user.id,
+    toUserId: req.body.toUserId,
+    text: req.body.text,
+    secure: true,
+    readAt: null,
+    createdAt: now(),
+  };
+  req.db.messages.unshift(message);
+  audit(req.db, req.user, 'secure_message_sent', 'message', message.id, { toUserId: message.toUserId });
+  saveAndSend(req, res, { sent: true, message });
+});
+
+app.get('/api/admin/stats', auth, allow('super_admin', 'operations'), (req, res) => {
+  res.json(summaryStats(req.db));
+});
+
+app.get('/api/admin/dashboard', auth, allow('super_admin', 'operations'), (req, res) => {
+  res.json({
+    stats: summaryStats(req.db),
+    users: req.db.users.map(publicUser),
+    subscriptions: req.db.subscriptions,
+    payments: req.db.payments,
+    credentials: req.db.credentials,
+    consultations: req.db.consultations,
+    prescriptions: req.db.prescriptions,
+    orders: req.db.orders,
+    payouts: req.db.payouts,
+    supportTickets: req.db.supportTickets,
+    auditLogs: req.db.auditLogs.slice(0, 80),
+    plans: req.db.plans,
+    doctorProfiles: req.db.doctorProfiles,
+    pharmacyProfiles: req.db.pharmacyProfiles,
+    settings: req.db.settings,
+  });
+});
+
+app.get('/api/admin/users', auth, allow('super_admin', 'operations'), (req, res) => {
+  const role = req.query.role;
+  const users = req.db.users.filter((user) => !role || user.role === role).map(publicUser);
+  res.json({ users, total: users.length });
+});
+
+app.patch('/api/admin/users/:userId/status', auth, allow('super_admin', 'operations'), (req, res) => {
+  const user = byId(req.db.users, req.params.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  user.status = req.body.status;
+  audit(req.db, req.user, 'user_status_updated', 'user', user.id, { status: user.status });
+  saveAndSend(req, res, { success: true, user: publicUser(user) });
+});
+
+app.post('/api/admin/providers/:userId/decision', auth, allow('super_admin', 'operations'), (req, res) => {
+  const user = byId(req.db.users, req.params.userId);
+  if (!user || !['doctor', 'pharmacy'].includes(user.role)) return res.status(404).json({ error: 'Provider not found' });
+  const approved = req.body.decision === 'approve';
+  user.status = approved ? 'active' : 'rejected';
+  const collection = user.role === 'doctor' ? req.db.doctorProfiles : req.db.pharmacyProfiles;
+  const profile = collection.find((item) => item.userId === user.id);
+  if (profile) {
+    profile.verificationStatus = approved ? 'approved' : 'rejected';
+    profile.approvedAt = approved ? now() : null;
+    profile.rejectedReason = approved ? null : req.body.reason || 'Not specified';
+  }
+  audit(req.db, req.user, approved ? 'provider_approved' : 'provider_rejected', user.role, user.id, { reason: req.body.reason });
+  saveAndSend(req, res, { success: true, user: publicUser(user), profile });
+});
+
+app.post('/api/admin/documents/:documentId/review', auth, allow('super_admin', 'operations'), (req, res) => {
+  const document = byId(req.db.credentials, req.params.documentId);
+  if (!document) return res.status(404).json({ error: 'Document not found' });
+  document.status = req.body.status || 'verified';
+  document.reviewedBy = req.user.id;
+  document.reviewedAt = now();
+  document.notes = req.body.notes || '';
+  audit(req.db, req.user, 'credential_reviewed', 'credential', document.id, { status: document.status });
+  saveAndSend(req, res, { success: true, document });
+});
+
+app.post('/api/admin/assignments/doctor', auth, allow('super_admin', 'operations'), (req, res) => {
+  const consultation = byId(req.db.consultations, req.body.consultationId);
+  if (!consultation) return res.status(404).json({ error: 'Consultation not found' });
+  consultation.doctorId = req.body.doctorId;
+  consultation.status = 'assigned';
+  const profile = req.db.doctorProfiles.find((item) => item.userId === req.body.doctorId);
+  if (profile && !profile.patientsAssigned.includes(consultation.patientId)) profile.patientsAssigned.push(consultation.patientId);
+  audit(req.db, req.user, 'doctor_assigned', 'consultation', consultation.id, { doctorId: req.body.doctorId });
+  saveAndSend(req, res, { success: true, consultation });
+});
+
+app.post('/api/admin/assignments/pharmacy', auth, allow('super_admin', 'operations'), (req, res) => {
+  const prescription = byId(req.db.prescriptions, req.body.prescriptionId);
+  if (!prescription) return res.status(404).json({ error: 'Prescription not found' });
+  prescription.pharmacyId = req.body.pharmacyId;
+  audit(req.db, req.user, 'pharmacy_assigned', 'prescription', prescription.id, { pharmacyId: req.body.pharmacyId });
+  saveAndSend(req, res, { success: true, prescription });
+});
+
+app.post('/api/admin/plans', auth, allow('super_admin'), (req, res) => {
+  const plan = { id: id('plan'), status: 'active', currency: 'NGN', billingCycle: 'monthly', features: [], ...req.body };
+  req.db.plans.push(plan);
+  audit(req.db, req.user, 'plan_created', 'plan', plan.id);
+  saveAndSend(req, res, { success: true, plan }, 201);
+});
+
+app.patch('/api/admin/plans/:planId', auth, allow('super_admin'), (req, res) => {
+  const plan = byId(req.db.plans, req.params.planId);
+  if (!plan) return res.status(404).json({ error: 'Plan not found' });
+  Object.assign(plan, req.body);
+  audit(req.db, req.user, 'plan_updated', 'plan', plan.id);
+  saveAndSend(req, res, { success: true, plan });
+});
+
+app.post('/api/admin/refunds', auth, allow('super_admin', 'operations'), (req, res) => {
+  const payment = byId(req.db.payments, req.body.paymentId);
+  if (!payment) return res.status(404).json({ error: 'Payment not found' });
+  payment.status = 'refunded';
+  const ticket = {
+    id: id('ticket'),
+    userId: payment.userId,
+    assignedTo: req.user.id,
+    priority: 'medium',
+    subject: `Refund processed for ${payment.reference}`,
+    status: 'closed',
+    messages: [req.body.reason || 'Refund processed by operations.'],
+    escalated: false,
+    createdAt: now(),
+  };
+  req.db.supportTickets.unshift(ticket);
+  audit(req.db, req.user, 'refund_processed', 'payment', payment.id, { reason: req.body.reason });
+  saveAndSend(req, res, { success: true, payment, ticket });
+});
+
+app.patch('/api/admin/settings', auth, allow('super_admin'), (req, res) => {
+  Object.assign(req.db.settings, req.body);
+  audit(req.db, req.user, 'settings_updated', 'settings', 'platform');
+  saveAndSend(req, res, { success: true, settings: req.db.settings });
+});
+
+app.get('/api/admin/reports/export', auth, allow('super_admin', 'operations'), (req, res) => {
+  const rows = [
+    ['Metric', 'Value'],
+    ['Revenue', summaryStats(req.db).revenue],
+    ['Platform Commission', summaryStats(req.db).commission],
+    ['Active Subscriptions', summaryStats(req.db).activeSubscriptions],
+    ['Users', req.db.users.length],
+    ['Pending Credentials', summaryStats(req.db).pendingCredentials],
+  ];
+  audit(req.db, req.user, 'report_exported', 'report', 'dashboard_csv');
+  writeDb(req.db);
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="wellbodyvital-report.csv"');
+  res.send(rows.map((row) => row.join(',')).join('\n'));
+});
+
+app.get('/api/doctor/dashboard', auth, allow('doctor', 'super_admin', 'operations'), (req, res) => {
+  const doctorId = req.user.role === 'doctor' ? req.user.id : req.query.doctorId || 'usr_doctor';
+  res.json(providerDashboard(req.db, 'doctor', doctorId));
+});
+
+app.get('/api/doctor', auth, (req, res) => {
+  const doctor = req.db.users.find((user) => user.role === 'doctor');
+  res.json({ name: doctor?.name || 'Doctor pending assignment', status: doctor?.status || 'pending' });
+});
+
+app.get('/api/doctor/messages', auth, (req, res) => {
+  res.json({ messages: req.db.messages.filter((msg) => msg.fromUserId === req.user.id || msg.toUserId === req.user.id) });
+});
+
+app.post('/api/doctor/message', auth, allow('doctor', 'patient'), (req, res) => {
+  const message = {
+    id: id('msg'),
+    threadId: req.body.threadId || `thread_${req.user.id}_${req.body.toUserId}`,
+    fromUserId: req.user.id,
+    toUserId: req.body.toUserId,
+    text: req.body.text,
+    secure: true,
+    readAt: null,
+    createdAt: now(),
+  };
+  req.db.messages.unshift(message);
+  audit(req.db, req.user, 'secure_message_sent', 'message', message.id);
+  saveAndSend(req, res, { sent: true, message });
+});
+
+app.post('/api/doctor/book', auth, (req, res) => {
+  const consultation = {
+    id: id('consult'),
+    patientId: req.user.id,
+    doctorId: req.body.doctorId || 'usr_doctor',
+    questionnaireId: req.body.questionnaireId || null,
+    status: 'scheduled',
+    eligibility: 'pending',
+    recommendation: '',
+    followUpAt: req.body.date || new Date(Date.now() + 3 * 86400000).toISOString(),
+    sideEffects: [],
+    createdAt: now(),
+  };
+  req.db.consultations.push(consultation);
+  audit(req.db, req.user, 'consultation_booked', 'consultation', consultation.id);
+  saveAndSend(req, res, { booked: true, consultation, date: consultation.followUpAt });
+});
+
+app.post('/api/doctor/consultations/:consultationId/decision', auth, allow('doctor'), (req, res) => {
+  const consultation = byId(req.db.consultations, req.params.consultationId);
+  if (!consultation || consultation.doctorId !== req.user.id) return res.status(404).json({ error: 'Consultation not found' });
+  consultation.eligibility = req.body.eligibility || 'approved';
+  consultation.status = consultation.eligibility === 'approved' ? 'approved' : 'rejected';
+  consultation.recommendation = req.body.recommendation || consultation.recommendation;
+  consultation.followUpAt = req.body.followUpAt || consultation.followUpAt;
+  audit(req.db, req.user, 'medical_decision_recorded', 'consultation', consultation.id, { eligibility: consultation.eligibility });
+  saveAndSend(req, res, { success: true, consultation });
+});
+
+app.post('/api/doctor/prescriptions', auth, allow('doctor'), (req, res) => {
+  const prescription = {
+    id: id('rx'),
+    patientId: req.body.patientId,
+    doctorId: req.user.id,
+    pharmacyId: req.body.pharmacyId || null,
+    consultationId: req.body.consultationId,
+    medication: req.body.medication,
+    dosage: req.body.dosage,
+    status: 'approved',
+    auditTrail: [{ at: now(), by: req.user.id, action: 'prescription_issued' }],
+    issuedAt: now(),
+  };
+  req.db.prescriptions.push(prescription);
+  audit(req.db, req.user, 'prescription_issued', 'prescription', prescription.id, { patientId: prescription.patientId });
+  saveAndSend(req, res, { success: true, prescription }, 201);
+});
+
+app.post('/api/doctor/side-effects', auth, allow('doctor', 'patient'), (req, res) => {
+  const consultation = byId(req.db.consultations, req.body.consultationId);
+  if (!consultation) return res.status(404).json({ error: 'Consultation not found' });
+  const report = { at: now(), by: req.user.id, severity: req.body.severity || 'medium', notes: req.body.notes || '' };
+  consultation.sideEffects.push(report);
+  audit(req.db, req.user, 'side_effect_reported', 'consultation', consultation.id, { severity: report.severity });
+  saveAndSend(req, res, { success: true, report });
+});
+
+app.get('/api/pharmacy/dashboard', auth, allow('pharmacy', 'super_admin', 'operations'), (req, res) => {
+  const pharmacyId = req.user.role === 'pharmacy' ? req.user.id : req.query.pharmacyId || 'usr_pharmacy';
+  res.json(providerDashboard(req.db, 'pharmacy', pharmacyId));
+});
+
+app.get('/api/pharmacy/orders', auth, (req, res) => {
+  const pharmacyId = req.user.role === 'pharmacy' ? req.user.id : req.query.pharmacyId;
+  const orders = req.db.orders.filter((order) => !pharmacyId || order.pharmacyId === pharmacyId);
+  res.json({ orders });
+});
+
+app.patch('/api/pharmacy/orders/:orderId/status', auth, allow('pharmacy', 'operations', 'super_admin'), (req, res) => {
+  const order = byId(req.db.orders, req.params.orderId);
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+  if (req.user.role === 'pharmacy' && order.pharmacyId !== req.user.id) return res.status(403).json({ error: 'Order belongs to another pharmacy' });
+  order.status = req.body.status || order.status;
+  order.coldChainConfirmed = req.body.coldChainConfirmed ?? order.coldChainConfirmed;
+  order.proofOfFulfillmentUrl = req.body.proofOfFulfillmentUrl ?? order.proofOfFulfillmentUrl;
+  order.updatedAt = now();
+  audit(req.db, req.user, 'order_status_updated', 'order', order.id, { status: order.status });
+  saveAndSend(req, res, { success: true, order });
+});
+
+app.post('/api/pharmacy/inventory', auth, allow('pharmacy'), (req, res) => {
+  const item = {
+    id: id('inv'),
+    pharmacyId: req.user.id,
+    medication: req.body.medication,
+    quantity: money(req.body.quantity),
+    coldChain: Boolean(req.body.coldChain),
+    nafdacDocStatus: req.body.nafdacDocStatus || 'pending',
+    updatedAt: now(),
+  };
+  req.db.inventory.push(item);
+  audit(req.db, req.user, 'inventory_added', 'inventory', item.id);
+  saveAndSend(req, res, { success: true, item }, 201);
+});
+
+app.patch('/api/pharmacy/inventory/:inventoryId', auth, allow('pharmacy'), (req, res) => {
+  const item = byId(req.db.inventory, req.params.inventoryId);
+  if (!item || item.pharmacyId !== req.user.id) return res.status(404).json({ error: 'Inventory item not found' });
+  Object.assign(item, req.body, { updatedAt: now() });
+  audit(req.db, req.user, 'inventory_updated', 'inventory', item.id);
+  saveAndSend(req, res, { success: true, item });
+});
+
+app.post('/api/pharmacy/refill', auth, (req, res) => {
+  audit(req.db, req.user, 'refill_requested', 'prescription', req.body.prescriptionId || 'unknown');
+  saveAndSend(req, res, { requested: true });
+});
+
+app.post('/api/pharmacy/report', auth, (req, res) => {
+  audit(req.db, req.user, 'pharmacy_issue_reported', 'order', req.body.orderId || 'unknown', { notes: req.body.notes });
+  saveAndSend(req, res, { reported: true });
+});
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`WellBodyVital running at http://localhost:${PORT}`);
+    console.log(`Back office available at http://localhost:${PORT}/admin`);
+  });
+}
+
+module.exports = app;
