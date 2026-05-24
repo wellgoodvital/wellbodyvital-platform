@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "f771a703-1c35-46df-b88f-wellbodyvital",
     "name": "WellBodyVital Platform API",
-    "description": "Customer app, back-office, doctor, pharmacy, operations, payment, and compliance APIs for the WellBodyVital medical weight loss subscription platform. Use the login requests first; each login saves a role-specific bearer token into the active Postman environment.",
+    "description": "Customer app, back-office, doctor, pharmacy, operations, payment, and compliance APIs for the WellBodyVital medical weight loss subscription platform. Use the login requests first; each login saves a role-specific bearer token into the active Postman environment. Production integrations should use the versioned /api/v1 namespace.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -56,6 +56,26 @@
     {
       "key": "authToken",
       "value": ""
+    },
+    {
+      "key": "adminRefreshToken",
+      "value": ""
+    },
+    {
+      "key": "opsRefreshToken",
+      "value": ""
+    },
+    {
+      "key": "customerRefreshToken",
+      "value": ""
+    },
+    {
+      "key": "doctorRefreshToken",
+      "value": ""
+    },
+    {
+      "key": "pharmacyRefreshToken",
+      "value": ""
     }
   ],
   "item": [
@@ -73,8 +93,9 @@
                 "exec": [
                   "pm.test('login succeeded', () => pm.response.to.have.status(200));",
                   "const json = pm.response.json();",
-                  "pm.environment.set('adminToken', json.token);",
-                  "pm.environment.set('authToken', json.token);"
+                  "pm.environment.set('adminToken', json.accessToken || json.token);",
+                  "pm.environment.set('adminRefreshToken', json.refreshToken);",
+                  "pm.environment.set('authToken', json.accessToken || json.token);"
                 ]
               }
             }
@@ -92,12 +113,13 @@
               "raw": "{\n  \"email\": \"super@wellbodyvital.com\",\n  \"password\": \"password123\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/auth/login",
+              "raw": "{{baseUrl}}/api/v1/auth/login",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "auth",
                 "login"
               ]
@@ -115,8 +137,9 @@
                 "exec": [
                   "pm.test('login succeeded', () => pm.response.to.have.status(200));",
                   "const json = pm.response.json();",
-                  "pm.environment.set('opsToken', json.token);",
-                  "pm.environment.set('authToken', json.token);"
+                  "pm.environment.set('opsToken', json.accessToken || json.token);",
+                  "pm.environment.set('opsRefreshToken', json.refreshToken);",
+                  "pm.environment.set('authToken', json.accessToken || json.token);"
                 ]
               }
             }
@@ -134,12 +157,13 @@
               "raw": "{\n  \"email\": \"ops@wellbodyvital.com\",\n  \"password\": \"password123\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/auth/login",
+              "raw": "{{baseUrl}}/api/v1/auth/login",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "auth",
                 "login"
               ]
@@ -156,8 +180,9 @@
                 "exec": [
                   "pm.test('login succeeded', () => pm.response.to.have.status(200));",
                   "const json = pm.response.json();",
-                  "pm.environment.set('customerToken', json.token);",
-                  "pm.environment.set('authToken', json.token);"
+                  "pm.environment.set('customerToken', json.accessToken || json.token);",
+                  "pm.environment.set('customerRefreshToken', json.refreshToken);",
+                  "pm.environment.set('authToken', json.accessToken || json.token);"
                 ]
               }
             }
@@ -175,12 +200,13 @@
               "raw": "{\n  \"email\": \"patient@wellbodyvital.com\",\n  \"password\": \"password123\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/auth/login",
+              "raw": "{{baseUrl}}/api/v1/auth/login",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "auth",
                 "login"
               ]
@@ -197,8 +223,9 @@
                 "exec": [
                   "pm.test('login succeeded', () => pm.response.to.have.status(200));",
                   "const json = pm.response.json();",
-                  "pm.environment.set('doctorToken', json.token);",
-                  "pm.environment.set('authToken', json.token);"
+                  "pm.environment.set('doctorToken', json.accessToken || json.token);",
+                  "pm.environment.set('doctorRefreshToken', json.refreshToken);",
+                  "pm.environment.set('authToken', json.accessToken || json.token);"
                 ]
               }
             }
@@ -216,12 +243,13 @@
               "raw": "{\n  \"email\": \"doctor@wellbodyvital.com\",\n  \"password\": \"password123\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/auth/login",
+              "raw": "{{baseUrl}}/api/v1/auth/login",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "auth",
                 "login"
               ]
@@ -238,8 +266,9 @@
                 "exec": [
                   "pm.test('login succeeded', () => pm.response.to.have.status(200));",
                   "const json = pm.response.json();",
-                  "pm.environment.set('pharmacyToken', json.token);",
-                  "pm.environment.set('authToken', json.token);"
+                  "pm.environment.set('pharmacyToken', json.accessToken || json.token);",
+                  "pm.environment.set('pharmacyRefreshToken', json.refreshToken);",
+                  "pm.environment.set('authToken', json.accessToken || json.token);"
                 ]
               }
             }
@@ -257,12 +286,13 @@
               "raw": "{\n  \"email\": \"pharmacy@wellbodyvital.com\",\n  \"password\": \"password123\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/auth/login",
+              "raw": "{{baseUrl}}/api/v1/auth/login",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "auth",
                 "login"
               ]
@@ -275,16 +305,61 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/auth/me",
+              "raw": "{{baseUrl}}/api/v1/auth/me",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "auth",
                 "me"
               ]
             }
+          }
+        },
+        {
+          "name": "Refresh Customer Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('refresh succeeded', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.environment.set('customerToken', json.accessToken || json.token);",
+                  "pm.environment.set('customerRefreshToken', json.refreshToken);",
+                  "pm.environment.set('authToken', json.accessToken || json.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{customerRefreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "Rotates the refresh token and returns a new short-lived access token."
           }
         },
         {
@@ -302,12 +377,13 @@
               "raw": "{\n  \"role\": \"doctor\",\n  \"name\": \"Dr. Demo Provider\",\n  \"email\": \"demo.doctor@example.com\",\n  \"phone\": \"+2348000001111\",\n  \"password\": \"password123\",\n  \"specialty\": \"Family medicine\",\n  \"mdcnNumber\": \"MDCN/DEMO/001\",\n  \"activePractice\": true\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/auth/register",
+              "raw": "{{baseUrl}}/api/v1/auth/register",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "auth",
                 "register"
               ]
@@ -329,12 +405,13 @@
               "raw": "{\n  \"role\": \"pharmacy\",\n  \"name\": \"Demo Partner Pharmacy\",\n  \"email\": \"demo.pharmacy@example.com\",\n  \"phone\": \"+2348000002222\",\n  \"password\": \"password123\",\n  \"pcnNumber\": \"PCN/DEMO/001\",\n  \"premisesLicense\": \"PREM/DEMO/001\",\n  \"coldChainCertified\": true,\n  \"coverageStates\": [\"Lagos\", \"Ogun\"]\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/auth/register",
+              "raw": "{{baseUrl}}/api/v1/auth/register",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "auth",
                 "register"
               ]
@@ -366,12 +443,13 @@
               "type": "noauth"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/plans",
+              "raw": "{{baseUrl}}/api/v1/plans",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "plans"
               ]
             }
@@ -383,12 +461,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/user/profile",
+              "raw": "{{baseUrl}}/api/v1/user/profile",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "user",
                 "profile"
               ]
@@ -410,12 +489,13 @@
               "raw": "{\n  \"name\": \"Amara Okafor\",\n  \"phone\": \"+2348001234567\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/user/profile",
+              "raw": "{{baseUrl}}/api/v1/user/profile",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "user",
                 "profile"
               ]
@@ -437,12 +517,13 @@
               "raw": "{\n  \"plan\": \"pro\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/subscription",
+              "raw": "{{baseUrl}}/api/v1/subscription",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "subscription"
               ]
             }
@@ -463,12 +544,13 @@
               "raw": "{\n  \"type\": \"subscription\",\n  \"amount\": 35000,\n  \"currency\": \"NGN\",\n  \"channel\": \"paystack\",\n  \"doctorFee\": 10000,\n  \"platformCommission\": 7000\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/payment/initiate",
+              "raw": "{{baseUrl}}/api/v1/payment/initiate",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "payment",
                 "initiate"
               ]
@@ -490,12 +572,13 @@
               "raw": "{\n  \"reference\": \"WBV-REPLACE-ME\",\n  \"status\": \"paid\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/payment/verify",
+              "raw": "{{baseUrl}}/api/v1/payment/verify",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "payment",
                 "verify"
               ]
@@ -517,12 +600,13 @@
               "raw": "{\n  \"heightCm\": 166,\n  \"weightKg\": 92,\n  \"goals\": [\"Lose weight\", \"Improve energy\"],\n  \"conditions\": [\"Hypertension\"],\n  \"medications\": [\"Amlodipine\"],\n  \"allergies\": [\"None\"]\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/questionnaire",
+              "raw": "{{baseUrl}}/api/v1/questionnaire",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "questionnaire"
               ]
             }
@@ -534,12 +618,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/questionnaire",
+              "raw": "{{baseUrl}}/api/v1/questionnaire",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "questionnaire"
               ]
             }
@@ -560,12 +645,13 @@
               "raw": "{\n  \"type\": \"Lab result\",\n  \"fileName\": \"fasting-glucose.pdf\",\n  \"url\": \"/uploads/demo/fasting-glucose.pdf\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/documents/upload",
+              "raw": "{{baseUrl}}/api/v1/documents/upload",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "documents",
                 "upload"
               ]
@@ -578,12 +664,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/documents",
+              "raw": "{{baseUrl}}/api/v1/documents",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "documents"
               ]
             }
@@ -595,12 +682,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/progress",
+              "raw": "{{baseUrl}}/api/v1/progress",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "progress"
               ]
             }
@@ -621,12 +709,13 @@
               "raw": "{\n  \"weightKg\": 88.5,\n  \"waistCm\": 94,\n  \"notes\": \"Felt more energetic this week.\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/progress/log",
+              "raw": "{{baseUrl}}/api/v1/progress/log",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "progress",
                 "log"
               ]
@@ -639,12 +728,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/notifications",
+              "raw": "{{baseUrl}}/api/v1/notifications",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "notifications"
               ]
             }
@@ -656,12 +746,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/messages",
+              "raw": "{{baseUrl}}/api/v1/messages",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "messages"
               ]
             }
@@ -682,12 +773,13 @@
               "raw": "{\n  \"toUserId\": \"usr_doctor\",\n  \"text\": \"Hello doctor, I uploaded my latest BP reading.\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/messages",
+              "raw": "{{baseUrl}}/api/v1/messages",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "messages"
               ]
             }
@@ -708,12 +800,13 @@
               "raw": "{\n  \"doctorId\": \"usr_doctor\",\n  \"date\": \"2026-05-30T10:00:00.000Z\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/doctor/book",
+              "raw": "{{baseUrl}}/api/v1/doctor/book",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "doctor",
                 "book"
               ]
@@ -735,12 +828,13 @@
               "raw": "{\n  \"prescriptionId\": \"rx_001\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/pharmacy/refill",
+              "raw": "{{baseUrl}}/api/v1/pharmacy/refill",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "pharmacy",
                 "refill"
               ]
@@ -769,12 +863,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/dashboard",
+              "raw": "{{baseUrl}}/api/v1/admin/dashboard",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "admin",
                 "dashboard"
               ]
@@ -787,12 +882,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/stats",
+              "raw": "{{baseUrl}}/api/v1/admin/stats",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "admin",
                 "stats"
               ]
@@ -805,12 +901,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/users",
+              "raw": "{{baseUrl}}/api/v1/admin/users",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "admin",
                 "users"
               ]
@@ -823,12 +920,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/users?role=doctor",
+              "raw": "{{baseUrl}}/api/v1/admin/users?role=doctor",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "admin",
                 "users"
               ],
@@ -856,12 +954,13 @@
               "raw": "{\n  \"status\": \"active\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/admin/users/usr_doctor/status",
+              "raw": "{{baseUrl}}/api/v1/admin/users/usr_doctor/status",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "admin",
                 "users",
                 "usr_doctor",
@@ -885,12 +984,13 @@
               "raw": "{\n  \"decision\": \"approve\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/admin/providers/usr_doctor/decision",
+              "raw": "{{baseUrl}}/api/v1/admin/providers/usr_doctor/decision",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "admin",
                 "providers",
                 "usr_doctor",
@@ -915,12 +1015,13 @@
               "raw": "{\n  \"decision\": \"reject\",\n  \"reason\": \"Credentials need resubmission\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/admin/providers/usr_pharmacy/decision",
+              "raw": "{{baseUrl}}/api/v1/admin/providers/usr_pharmacy/decision",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "admin",
                 "providers",
                 "usr_pharmacy",
@@ -944,12 +1045,13 @@
               "raw": "{\n  \"status\": \"verified\",\n  \"notes\": \"Document verified against issuing body.\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/admin/documents/cred_001/review",
+              "raw": "{{baseUrl}}/api/v1/admin/documents/cred_001/review",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "admin",
                 "documents",
                 "cred_001",
@@ -973,12 +1075,13 @@
               "raw": "{\n  \"consultationId\": \"consult_001\",\n  \"doctorId\": \"usr_doctor\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/admin/assignments/doctor",
+              "raw": "{{baseUrl}}/api/v1/admin/assignments/doctor",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "admin",
                 "assignments",
                 "doctor"
@@ -1001,12 +1104,13 @@
               "raw": "{\n  \"prescriptionId\": \"rx_001\",\n  \"pharmacyId\": \"usr_pharmacy\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/admin/assignments/pharmacy",
+              "raw": "{{baseUrl}}/api/v1/admin/assignments/pharmacy",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "admin",
                 "assignments",
                 "pharmacy"
@@ -1029,12 +1133,13 @@
               "raw": "{\n  \"slug\": \"clinical-plus\",\n  \"name\": \"Clinical Plus\",\n  \"price\": 85000,\n  \"doctorFee\": 20000,\n  \"pharmacyAllocation\": 35000,\n  \"platformCommissionRate\": 0.24,\n  \"features\": [\"Advanced physician review\", \"Premium refill management\"]\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/admin/plans",
+              "raw": "{{baseUrl}}/api/v1/admin/plans",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "admin",
                 "plans"
               ]
@@ -1056,12 +1161,13 @@
               "raw": "{\n  \"price\": 70000,\n  \"status\": \"active\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/admin/plans/plan_premium",
+              "raw": "{{baseUrl}}/api/v1/admin/plans/plan_premium",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "admin",
                 "plans",
                 "plan_premium"
@@ -1084,12 +1190,13 @@
               "raw": "{\n  \"paymentId\": \"pay_001\",\n  \"reason\": \"Customer support-approved refund.\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/admin/refunds",
+              "raw": "{{baseUrl}}/api/v1/admin/refunds",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "admin",
                 "refunds"
               ]
@@ -1111,12 +1218,13 @@
               "raw": "{\n  \"supportEmail\": \"support@wellbodyvital.com\",\n  \"payoutDay\": \"Friday\",\n  \"ndprRetentionYears\": 7\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/admin/settings",
+              "raw": "{{baseUrl}}/api/v1/admin/settings",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "admin",
                 "settings"
               ]
@@ -1129,12 +1237,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/reports/export",
+              "raw": "{{baseUrl}}/api/v1/admin/reports/export",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "admin",
                 "reports",
                 "export"
@@ -1163,12 +1272,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/doctor/dashboard",
+              "raw": "{{baseUrl}}/api/v1/doctor/dashboard",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "doctor",
                 "dashboard"
               ]
@@ -1181,12 +1291,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/doctor/messages",
+              "raw": "{{baseUrl}}/api/v1/doctor/messages",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "doctor",
                 "messages"
               ]
@@ -1208,12 +1319,13 @@
               "raw": "{\n  \"toUserId\": \"usr_patient\",\n  \"text\": \"Please upload your latest blood pressure reading.\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/doctor/message",
+              "raw": "{{baseUrl}}/api/v1/doctor/message",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "doctor",
                 "message"
               ]
@@ -1235,12 +1347,13 @@
               "raw": "{\n  \"eligibility\": \"approved\",\n  \"recommendation\": \"Eligible for medically supervised metabolic care.\",\n  \"followUpAt\": \"2026-06-05T10:00:00.000Z\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/doctor/consultations/consult_001/decision",
+              "raw": "{{baseUrl}}/api/v1/doctor/consultations/consult_001/decision",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "doctor",
                 "consultations",
                 "consult_001",
@@ -1264,12 +1377,13 @@
               "raw": "{\n  \"patientId\": \"usr_patient\",\n  \"consultationId\": \"consult_001\",\n  \"pharmacyId\": \"usr_pharmacy\",\n  \"medication\": \"Clinician supervised metabolic medication protocol\",\n  \"dosage\": \"Start low and titrate per response\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/doctor/prescriptions",
+              "raw": "{{baseUrl}}/api/v1/doctor/prescriptions",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "doctor",
                 "prescriptions"
               ]
@@ -1291,12 +1405,13 @@
               "raw": "{\n  \"consultationId\": \"consult_001\",\n  \"severity\": \"medium\",\n  \"notes\": \"Patient reported nausea after first dose.\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/doctor/side-effects",
+              "raw": "{{baseUrl}}/api/v1/doctor/side-effects",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "doctor",
                 "side-effects"
               ]
@@ -1324,12 +1439,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/pharmacy/dashboard",
+              "raw": "{{baseUrl}}/api/v1/pharmacy/dashboard",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "pharmacy",
                 "dashboard"
               ]
@@ -1342,12 +1458,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/pharmacy/orders",
+              "raw": "{{baseUrl}}/api/v1/pharmacy/orders",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "pharmacy",
                 "orders"
               ]
@@ -1369,12 +1486,13 @@
               "raw": "{\n  \"status\": \"packed\",\n  \"coldChainConfirmed\": true,\n  \"proofOfFulfillmentUrl\": \"/uploads/proof/order-001.pdf\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/pharmacy/orders/ord_001/status",
+              "raw": "{{baseUrl}}/api/v1/pharmacy/orders/ord_001/status",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "pharmacy",
                 "orders",
                 "ord_001",
@@ -1398,12 +1516,13 @@
               "raw": "{\n  \"medication\": \"Semaglutide starter pens\",\n  \"quantity\": 20,\n  \"coldChain\": true,\n  \"nafdacDocStatus\": \"verified\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/pharmacy/inventory",
+              "raw": "{{baseUrl}}/api/v1/pharmacy/inventory",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "pharmacy",
                 "inventory"
               ]
@@ -1425,12 +1544,13 @@
               "raw": "{\n  \"quantity\": 16,\n  \"nafdacDocStatus\": \"verified\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/pharmacy/inventory/inv_001",
+              "raw": "{{baseUrl}}/api/v1/pharmacy/inventory/inv_001",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "pharmacy",
                 "inventory",
                 "inv_001"
@@ -1460,12 +1580,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/schema",
+              "raw": "{{baseUrl}}/api/v1/schema",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "schema"
               ]
             }
@@ -1498,12 +1619,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/dashboard",
+              "raw": "{{baseUrl}}/api/v1/admin/dashboard",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "admin",
                 "dashboard"
               ]
@@ -1529,12 +1651,13 @@
               "raw": "{\n  \"provider\": \"paystack\",\n  \"reference\": \"WBV-2026-48291\",\n  \"status\": \"paid\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/payment/webhook",
+              "raw": "{{baseUrl}}/api/v1/payment/webhook",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "payment",
                 "webhook"
               ]

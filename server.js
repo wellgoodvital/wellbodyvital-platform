@@ -16,17 +16,31 @@ const IS_SERVERLESS = Boolean(process.env.WBV_SERVERLESS || process.env.VERCEL |
 const APP_ROOT = process.env.APP_ROOT || (IS_SERVERLESS ? process.cwd() : __dirname);
 const DB_PATH = process.env.DB_PATH || (IS_SERVERLESS ? path.join('/tmp', 'wbv-db.json') : path.join(APP_ROOT, 'data', 'wbv-db.json'));
 const TOKEN_SECRET = process.env.TOKEN_SECRET || 'wellbodyvital-local-demo-secret';
-const sessions = new Map();
+const ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET || TOKEN_SECRET;
+const ACCESS_TOKEN_TTL_MS = Number(process.env.ACCESS_TOKEN_TTL_MS || 15 * 60 * 1000);
+const REFRESH_TOKEN_TTL_MS = Number(process.env.REFRESH_TOKEN_TTL_MS || 7 * 24 * 60 * 60 * 1000);
+const REFRESH_IDLE_TTL_MS = Number(process.env.REFRESH_IDLE_TTL_MS || 30 * 60 * 1000);
+const rateBuckets = new Map();
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use((req, res, next) => {
+  req.requestId = req.headers['x-request-id'] || id('req');
+  res.setHeader('X-Request-ID', req.requestId);
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
+
+app.use((req, res, next) => {
+  if (req.url.startsWith('/api/v1/')) {
+    req.url = req.url.replace(/^\/api\/v1/, '/api');
+  }
   next();
 });
 
@@ -61,27 +75,134 @@ function writeDb(db) {
 
 function publicUser(user) {
   if (!user) return null;
-  const { password, ...safe } = user;
+  const { password, passwordHash, ...safe } = user;
   return safe;
 }
 
-function signToken(userId) {
-  const payload = Buffer.from(JSON.stringify({ userId, createdAt: now() })).toString('base64url');
+function passwordHash(password, salt = crypto.randomBytes(16).toString('base64url')) {
+  const hash = crypto.scryptSync(String(password), salt, 64).toString('base64url');
+  return `scrypt$${salt}$${hash}`;
+}
+
+function verifyPassword(user, password) {
+  if (user.passwordHash?.startsWith('scrypt$')) {
+    const [, salt, expected] = user.passwordHash.split('$');
+    const actual = crypto.scryptSync(String(password), salt, 64).toString('base64url');
+    return crypto.timingSafeEqual(Buffer.from(actual), Buffer.from(expected));
+  }
+  return user.password === password;
+}
+
+function tokenHash(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+function encryptionKey() {
+  return crypto.createHash('sha256').update(ENCRYPTION_SECRET).digest();
+}
+
+function encryptField(value) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', encryptionKey(), iv);
+  const plaintext = JSON.stringify(value ?? null);
+  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  return {
+    alg: 'aes-256-gcm',
+    iv: iv.toString('base64url'),
+    tag: cipher.getAuthTag().toString('base64url'),
+    ciphertext: encrypted.toString('base64url'),
+  };
+}
+
+function decryptField(payload) {
+  if (!payload?.ciphertext) return null;
+  const decipher = crypto.createDecipheriv('aes-256-gcm', encryptionKey(), Buffer.from(payload.iv, 'base64url'));
+  decipher.setAuthTag(Buffer.from(payload.tag, 'base64url'));
+  const decrypted = Buffer.concat([
+    decipher.update(Buffer.from(payload.ciphertext, 'base64url')),
+    decipher.final(),
+  ]).toString('utf8');
+  return JSON.parse(decrypted);
+}
+
+function signToken(userId, type = 'access', ttlMs = ACCESS_TOKEN_TTL_MS, extra = {}) {
+  const issuedAt = Date.now();
+  const payload = Buffer.from(JSON.stringify({
+    userId,
+    type,
+    jti: id(type === 'refresh' ? 'rt' : 'at'),
+    iat: issuedAt,
+    exp: issuedAt + ttlMs,
+    ...extra,
+  })).toString('base64url');
   const signature = crypto.createHmac('sha256', TOKEN_SECRET).update(payload).digest('base64url');
   return `wbv_${payload}.${signature}`;
 }
 
-function verifyToken(token) {
+function verifyToken(token, expectedType = 'access') {
   if (!token?.startsWith('wbv_')) return null;
   const [payload, signature] = token.slice(4).split('.');
   if (!payload || !signature) return null;
   const expected = crypto.createHmac('sha256', TOKEN_SECRET).update(payload).digest('base64url');
   if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
   try {
-    return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    if (claims.type !== expectedType) return null;
+    if (Date.now() > claims.exp) return null;
+    return claims;
   } catch (error) {
     return null;
   }
+}
+
+function issueTokenPair(db, user) {
+  const accessToken = signToken(user.id, 'access', ACCESS_TOKEN_TTL_MS);
+  const refreshToken = signToken(user.id, 'refresh', REFRESH_TOKEN_TTL_MS);
+  const claims = verifyToken(refreshToken, 'refresh');
+  db.refreshTokens = db.refreshTokens || [];
+  db.refreshTokens.push({
+    id: claims.jti,
+    userId: user.id,
+    tokenHash: tokenHash(refreshToken),
+    createdAt: now(),
+    lastUsedAt: now(),
+    expiresAt: new Date(claims.exp).toISOString(),
+    revokedAt: null,
+  });
+  return {
+    token: accessToken,
+    accessToken,
+    refreshToken,
+    tokenType: 'Bearer',
+    expiresIn: Math.floor(ACCESS_TOKEN_TTL_MS / 1000),
+    refreshExpiresIn: Math.floor(REFRESH_TOKEN_TTL_MS / 1000),
+  };
+}
+
+function redactSensitive(value) {
+  if (!value || typeof value !== 'object') return value;
+  const blocked = new Set(['password', 'passwordHash', 'token', 'accessToken', 'refreshToken', 'authorization', 'apiKey', 'secret', 'ip']);
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [
+    key,
+    blocked.has(key) ? '[redacted]' : item,
+  ]));
+}
+
+function rateLimit(name, limit, windowMs) {
+  return (req, res, next) => {
+    const key = `${name}:${req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown'}`;
+    const bucket = rateBuckets.get(key) || { count: 0, resetAt: Date.now() + windowMs };
+    if (Date.now() > bucket.resetAt) {
+      bucket.count = 0;
+      bucket.resetAt = Date.now() + windowMs;
+    }
+    bucket.count += 1;
+    rateBuckets.set(key, bucket);
+    if (bucket.count > limit) {
+      return res.status(429).json({ error: 'Too many requests. Please wait and try again.', requestId: req.requestId });
+    }
+    next();
+  };
 }
 
 function audit(db, actor, action, entityType, entityId, details = {}) {
@@ -92,19 +213,18 @@ function audit(db, actor, action, entityType, entityId, details = {}) {
     action,
     entityType,
     entityId,
-    details,
-    ip: details.ip || null,
+    details: redactSensitive(details),
     createdAt: now(),
   });
 }
 
 function auth(req, res, next) {
   const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-  const session = sessions.get(token) || verifyToken(token);
-  if (!session) return res.status(401).json({ error: 'Authentication required' });
+  const session = verifyToken(token, 'access');
+  if (!session) return res.status(401).json({ error: 'Authentication required or token expired', requestId: req.requestId });
   const db = readDb();
   const user = db.users.find((item) => item.id === session.userId && item.status !== 'disabled');
-  if (!user) return res.status(401).json({ error: 'Session user not found' });
+  if (!user) return res.status(401).json({ error: 'Session user not found', requestId: req.requestId });
   req.db = db;
   req.user = user;
   req.token = token;
@@ -114,7 +234,7 @@ function auth(req, res, next) {
 function allow(...roles) {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Insufficient role permissions' });
+      return res.status(403).json({ error: 'Insufficient role permissions', requestId: req.requestId });
     }
     next();
   };
@@ -153,12 +273,12 @@ function summaryStats(db) {
 function seedData() {
   const createdAt = now();
   const users = [
-    { id: 'usr_super', role: 'super_admin', name: 'Ade WellBody', email: 'super@wellbodyvital.com', phone: '+2348000000001', status: 'active', password: 'password123', createdAt },
-    { id: 'usr_ops', role: 'operations', name: 'Operations Lead', email: 'ops@wellbodyvital.com', phone: '+2348000000002', status: 'active', password: 'password123', createdAt },
-    { id: 'usr_doctor', role: 'doctor', name: 'Dr. Kemi Adeyemi', email: 'doctor@wellbodyvital.com', phone: '+2348000000003', status: 'pending_verification', password: 'password123', createdAt },
-    { id: 'usr_pharmacy', role: 'pharmacy', name: 'MedPlus Lekki Pharmacy', email: 'pharmacy@wellbodyvital.com', phone: '+2348000000004', status: 'pending_verification', password: 'password123', createdAt },
-    { id: 'usr_patient', role: 'patient', name: 'Amara Okafor', email: 'patient@wellbodyvital.com', phone: '+2348000000005', status: 'active', password: 'password123', createdAt },
-    { id: 'usr_patient2', role: 'patient', name: 'Tunde Balogun', email: 'tunde@example.com', phone: '+2348000000006', status: 'active', password: 'password123', createdAt },
+    { id: 'usr_super', role: 'super_admin', name: 'Ade WellBody', email: 'super@wellbodyvital.com', phone: '+2348000000001', status: 'active', passwordHash: passwordHash('password123'), createdAt },
+    { id: 'usr_ops', role: 'operations', name: 'Operations Lead', email: 'ops@wellbodyvital.com', phone: '+2348000000002', status: 'active', passwordHash: passwordHash('password123'), createdAt },
+    { id: 'usr_doctor', role: 'doctor', name: 'Dr. Kemi Adeyemi', email: 'doctor@wellbodyvital.com', phone: '+2348000000003', status: 'pending_verification', passwordHash: passwordHash('password123'), createdAt },
+    { id: 'usr_pharmacy', role: 'pharmacy', name: 'MedPlus Lekki Pharmacy', email: 'pharmacy@wellbodyvital.com', phone: '+2348000000004', status: 'pending_verification', passwordHash: passwordHash('password123'), createdAt },
+    { id: 'usr_patient', role: 'patient', name: 'Amara Okafor', email: 'patient@wellbodyvital.com', phone: '+2348000000005', status: 'active', passwordHash: passwordHash('password123'), createdAt },
+    { id: 'usr_patient2', role: 'patient', name: 'Tunde Balogun', email: 'tunde@example.com', phone: '+2348000000006', status: 'active', passwordHash: passwordHash('password123'), createdAt },
   ];
 
   const plans = [
@@ -179,8 +299,8 @@ function seedData() {
       { id: 'pay_002', userId: 'usr_patient2', subscriptionId: 'sub_002', type: 'subscription', amount: 65000, currency: 'NGN', status: 'failed', channel: 'card', reference: 'WBV-2026-48292', doctorFee: 15000, pharmacyFee: 25000, platformCommission: 14300, createdAt },
     ],
     questionnaires: [
-      { id: 'q_001', userId: 'usr_patient', status: 'submitted', heightCm: 166, weightKg: 92, bmi: 33.4, goals: ['Lose 18kg', 'Improve energy', 'Lower cravings'], conditions: ['Hypertension'], medications: ['Amlodipine'], allergies: ['None'], submittedAt: createdAt },
-      { id: 'q_002', userId: 'usr_patient2', status: 'submitted', heightCm: 178, weightKg: 112, bmi: 35.3, goals: ['Reduce BMI', 'Improve sleep'], conditions: ['Prediabetes'], medications: [], allergies: ['Penicillin'], submittedAt: createdAt },
+      { id: 'q_001', userId: 'usr_patient', status: 'submitted', heightCm: 166, weightKg: 92, bmi: 33.4, encryptedMedicalPayload: encryptField({ goals: ['Lose 18kg', 'Improve energy', 'Lower cravings'], conditions: ['Hypertension'], medications: ['Amlodipine'], allergies: ['None'] }), submittedAt: createdAt },
+      { id: 'q_002', userId: 'usr_patient2', status: 'submitted', heightCm: 178, weightKg: 112, bmi: 35.3, encryptedMedicalPayload: encryptField({ goals: ['Reduce BMI', 'Improve sleep'], conditions: ['Prediabetes'], medications: [], allergies: ['Penicillin'] }), submittedAt: createdAt },
     ],
     doctorProfiles: [
       { id: 'doc_prof_001', userId: 'usr_doctor', specialty: 'Endocrinology and metabolic medicine', mdcnNumber: 'MDCN/NG/452198', activePractice: true, verificationStatus: 'pending', approvedAt: null, rejectedReason: null, patientsAssigned: ['usr_patient'], consultationRate: 10000 },
@@ -228,8 +348,9 @@ function seedData() {
       { id: 'consent_002', userId: 'usr_patient', type: 'Telehealth Consent', version: '2026.1', accepted: true, acceptedAt: createdAt },
     ],
     auditLogs: [
-      { id: 'audit_seed', actorUserId: 'system', actorRole: 'system', action: 'seed_created', entityType: 'database', entityId: 'wbv-db', details: { source: 'server bootstrap' }, ip: null, createdAt },
+      { id: 'audit_seed', actorUserId: 'system', actorRole: 'system', action: 'seed_created', entityType: 'database', entityId: 'wbv-db', details: { source: 'server bootstrap' }, createdAt },
     ],
+    refreshTokens: [],
     settings: {
       platformName: 'WellBodyVital',
       country: 'Nigeria',
@@ -285,7 +406,7 @@ app.post('/api/auth/register', (req, res) => {
     email: req.body.email,
     phone: req.body.phone || '',
     status: role === 'patient' ? 'active' : 'pending_verification',
-    password: req.body.password || 'password123',
+    passwordHash: passwordHash(req.body.password || 'password123'),
     createdAt: now(),
   };
   db.users.push(user);
@@ -322,21 +443,47 @@ app.post('/api/auth/register', (req, res) => {
   res.status(201).json({ success: true, user: publicUser(user) });
 });
 
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', rateLimit('auth:login', 10, 15 * 60 * 1000), (req, res) => {
   const db = readDb();
   const user = db.users.find((item) => item.email.toLowerCase() === String(req.body.email || '').toLowerCase());
-  if (!user || user.password !== req.body.password) return res.status(401).json({ error: 'Invalid email or password' });
-  const token = crypto.randomBytes(24).toString('hex');
-  const statelessToken = signToken(user.id);
-  sessions.set(token, { userId: user.id, createdAt: now() });
-  sessions.set(statelessToken, { userId: user.id, createdAt: now() });
-  audit(db, user, 'login', 'user', user.id, { ip: req.ip });
+  if (!user || !verifyPassword(user, req.body.password)) return res.status(401).json({ error: 'Invalid email or password', requestId: req.requestId });
+  if (!user.passwordHash) {
+    user.passwordHash = passwordHash(req.body.password);
+    delete user.password;
+  }
+  const tokens = issueTokenPair(db, user);
+  audit(db, user, 'login', 'user', user.id, { requestId: req.requestId });
   writeDb(db);
-  res.json({ success: true, token: statelessToken, user: publicUser(user) });
+  res.json({ success: true, ...tokens, user: publicUser(user) });
+});
+
+app.post('/api/auth/refresh', rateLimit('auth:refresh', 30, 15 * 60 * 1000), (req, res) => {
+  const db = readDb();
+  const refreshToken = req.body.refreshToken || (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  const claims = verifyToken(refreshToken, 'refresh');
+  if (!claims) return res.status(401).json({ error: 'Refresh token expired or invalid', requestId: req.requestId });
+  const stored = (db.refreshTokens || []).find((item) => item.id === claims.jti && item.tokenHash === tokenHash(refreshToken));
+  if (!stored || stored.revokedAt) return res.status(401).json({ error: 'Refresh token revoked', requestId: req.requestId });
+  if (Date.now() - new Date(stored.lastUsedAt).getTime() > REFRESH_IDLE_TTL_MS) {
+    stored.revokedAt = now();
+    writeDb(db);
+    return res.status(401).json({ error: 'Refresh token expired after inactivity', requestId: req.requestId });
+  }
+  const user = db.users.find((item) => item.id === claims.userId && item.status !== 'disabled');
+  if (!user) return res.status(401).json({ error: 'Session user not found', requestId: req.requestId });
+  stored.revokedAt = now();
+  const tokens = issueTokenPair(db, user);
+  audit(db, user, 'token_refreshed', 'user', user.id, { requestId: req.requestId });
+  writeDb(db);
+  res.json({ success: true, ...tokens, user: publicUser(user) });
 });
 
 app.post('/api/auth/logout', auth, (req, res) => {
-  sessions.delete(req.token);
+  if (req.body?.refreshToken) {
+    const claims = verifyToken(req.body.refreshToken, 'refresh');
+    const stored = (req.db.refreshTokens || []).find((item) => item.id === claims?.jti);
+    if (stored) stored.revokedAt = now();
+  }
   audit(req.db, req.user, 'logout', 'user', req.user.id);
   saveAndSend(req, res, { success: true });
 });
@@ -430,6 +577,12 @@ app.post('/api/payment/webhook', (req, res) => {
 });
 
 app.post('/api/questionnaire', auth, (req, res) => {
+  const encryptedMedicalPayload = encryptField({
+    goals: req.body.goals || [],
+    conditions: req.body.conditions || [],
+    medications: req.body.medications || [],
+    allergies: req.body.allergies || [],
+  });
   const questionnaire = {
     id: id('q'),
     userId: req.user.id,
@@ -437,20 +590,22 @@ app.post('/api/questionnaire', auth, (req, res) => {
     heightCm: money(req.body.heightCm),
     weightKg: money(req.body.weightKg),
     bmi: req.body.heightCm ? +(money(req.body.weightKg) / ((money(req.body.heightCm) / 100) ** 2)).toFixed(1) : null,
-    goals: req.body.goals || [],
-    conditions: req.body.conditions || [],
-    medications: req.body.medications || [],
-    allergies: req.body.allergies || [],
+    encryptedMedicalPayload,
     submittedAt: now(),
   };
   req.db.questionnaires.push(questionnaire);
   audit(req.db, req.user, 'questionnaire_submitted', 'questionnaire', questionnaire.id);
-  saveAndSend(req, res, { submitted: true, questionnaire, doctorAssigned: 'Pending operations assignment' });
+  saveAndSend(req, res, {
+    submitted: true,
+    questionnaire: { ...questionnaire, medicalPayload: decryptField(questionnaire.encryptedMedicalPayload) },
+    doctorAssigned: 'Pending operations assignment',
+  });
 });
 
 app.get('/api/questionnaire', auth, (req, res) => {
   const questionnaire = req.db.questionnaires.find((item) => item.userId === req.user.id);
-  res.json({ completed: Boolean(questionnaire), questionnaire });
+  const payload = questionnaire?.encryptedMedicalPayload ? decryptField(questionnaire.encryptedMedicalPayload) : null;
+  res.json({ completed: Boolean(questionnaire), questionnaire: questionnaire ? { ...questionnaire, medicalPayload: payload } : null });
 });
 
 app.post('/api/documents/upload', auth, (req, res) => {

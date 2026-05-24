@@ -13,6 +13,7 @@ Backend API and back office dashboard for a Nigeria-focused medical weight loss 
 - Pharmacy order, inventory, cold-chain, fulfillment, and refill workflows
 - Payment, subscription, payout, refund, reporting, and audit-log workflows
 - Local JSON datastore for prototype/demo mode
+- Versioned `/api/v1` routes, expiring access tokens, refresh-token rotation, password hashing, audit redaction, and encrypted medical questionnaire payloads
 
 ## Demo Login
 
@@ -31,6 +32,22 @@ doctor@wellbodyvital.com
 pharmacy@wellbodyvital.com
 patient@wellbodyvital.com
 ```
+
+## API Security
+
+Production integrations should use the versioned namespace:
+
+```txt
+/api/v1/*
+```
+
+Login returns a short-lived access token and refresh token. Protected routes require:
+
+```txt
+Authorization: Bearer <accessToken>
+```
+
+See [docs/security-baseline.md](docs/security-baseline.md) for the security middleware, token expiry, refresh behavior, encryption notes, and production hardening checklist.
 
 ## Local Development
 
@@ -90,7 +107,9 @@ The prototype uses `data/wbv-db.json` for persistence. For production, replace t
 ## Production Next Steps
 
 - Move persistence from JSON to PostgreSQL.
-- Add password hashing and JWT/session expiry.
+- Keep password hashing and token expiry enabled with strong production secrets.
+- Replace demo JSON persistence with PostgreSQL/Supabase.
+- Add strict request-body schema validation and production CORS allowlists.
 - Add secure file storage for documents, such as S3-compatible storage.
 - Integrate Paystack or Flutterwave for real payments.
 - Add provider email/SMS notifications.
