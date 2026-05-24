@@ -93,6 +93,33 @@ function verifyPassword(user, password) {
   return user.password === password;
 }
 
+const PASSWORD_BLOCKLIST = ['password', 'password123', 'qwerty', 'qwerty123', '12345678', '123456789', '11111111', 'admin123', 'letmein', 'welcome', 'wellbodyvital', 'nigeria'];
+function passwordPolicy(password, context = {}) {
+  const value = String(password || '');
+  const lower = value.toLowerCase();
+  const issues = [];
+  if (value.length < 15) issues.push('Use at least 15 characters.');
+  if (value.length > 128) issues.push('Use 128 characters or fewer.');
+  if (PASSWORD_BLOCKLIST.some((word) => lower.includes(word))) issues.push('Avoid common or easily guessed passwords.');
+  if (context.email && lower.includes(String(context.email).split('@')[0].toLowerCase())) issues.push('Do not include your email name.');
+  if (context.name && String(context.name).trim().split(/\s+/).some((part) => part.length > 2 && lower.includes(part.toLowerCase()))) issues.push('Do not include your name.');
+  return { ok: issues.length === 0, issues };
+}
+
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || ''));
+}
+
+function normalizeVerificationMethod(method) {
+  const allowed = ['email', 'whatsapp', 'sms', 'auth_app'];
+  return allowed.includes(method) ? method : 'email';
+}
+
+function isWithin(value, min, max) {
+  const number = money(value);
+  return Number.isFinite(number) && number >= min && number <= max;
+}
+
 function tokenHash(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
@@ -416,9 +443,14 @@ app.post('/api/auth/register', (req, res) => {
   const role = req.body.role || 'patient';
   const allowedRoles = ['patient', 'doctor', 'pharmacy'];
   if (!allowedRoles.includes(role)) return res.status(400).json({ error: 'Unsupported self-registration role' });
+  if (!validateEmail(req.body.email)) return res.status(400).json({ error: 'A valid email address is required' });
+  if (!String(req.body.name || '').trim()) return res.status(400).json({ error: 'Full name is required' });
+  const passwordCheck = passwordPolicy(req.body.password, { email: req.body.email, name: req.body.name });
+  if (!passwordCheck.ok) return res.status(400).json({ error: `Password is not strong enough. ${passwordCheck.issues.join(' ')}` });
   if (db.users.some((user) => user.email.toLowerCase() === String(req.body.email || '').toLowerCase())) {
     return res.status(409).json({ error: 'Email already registered' });
   }
+  const verificationMethod = normalizeVerificationMethod(req.body.verificationMethod);
   const user = {
     id: id('usr'),
     role,
@@ -426,8 +458,12 @@ app.post('/api/auth/register', (req, res) => {
     email: req.body.email,
     phone: req.body.phone || '',
     country: req.body.country || 'Nigeria',
+    verificationMethod,
+    verificationPriority: verificationMethod === 'sms' ? ['sms'] : verificationMethod === 'whatsapp' ? ['whatsapp', 'sms'] : [verificationMethod],
+    emailVerifiedAt: null,
+    phoneVerifiedAt: null,
     status: role === 'patient' ? 'active' : 'pending_verification',
-    passwordHash: passwordHash(req.body.password || 'password123'),
+    passwordHash: passwordHash(req.body.password),
     createdAt: now(),
   };
   db.users.push(user);
@@ -593,6 +629,9 @@ app.post('/api/subscription', auth, (req, res) => {
 });
 
 app.post('/api/payment/initiate', auth, (req, res) => {
+  const channels = ['card', 'bank', 'paystack', 'flutter', 'wallet'];
+  if (!isWithin(req.body.amount, 1, 10000000)) return res.status(400).json({ error: 'A valid payment amount is required' });
+  if (req.body.channel && !channels.includes(req.body.channel)) return res.status(400).json({ error: 'Unsupported payment channel' });
   const reference = `WBV-${Date.now()}`;
   const payment = {
     id: id('pay'),
@@ -632,6 +671,9 @@ app.post('/api/payment/webhook', (req, res) => {
 });
 
 app.post('/api/questionnaire', auth, (req, res) => {
+  if (!isWithin(req.body.heightCm, 90, 240)) return res.status(400).json({ error: 'Enter a valid height in centimetres' });
+  if (!isWithin(req.body.weightKg, 30, 300)) return res.status(400).json({ error: 'Enter a valid weight in kilograms' });
+  if (!Array.isArray(req.body.goals) || req.body.goals.length === 0) return res.status(400).json({ error: 'At least one wellness goal is required' });
   const encryptedMedicalPayload = encryptField({
     goals: req.body.goals || [],
     conditions: req.body.conditions || [],
@@ -663,6 +705,8 @@ app.get('/api/questionnaire', auth, (req, res) => {
 });
 
 app.post('/api/documents/upload', auth, (req, res) => {
+  if (!String(req.body.fileName || '').trim()) return res.status(400).json({ error: 'File name is required' });
+  if (!String(req.body.type || '').trim()) return res.status(400).json({ error: 'Document type is required' });
   const document = {
     id: id('cred'),
     ownerUserId: req.body.ownerUserId || req.user.id,
@@ -697,6 +741,9 @@ app.get('/api/progress', auth, (req, res) => {
 });
 
 app.post('/api/progress/log', auth, (req, res) => {
+  if (!isWithin(req.body.weightKg, 30, 300)) return res.status(400).json({ error: 'Enter a valid weight in kilograms' });
+  if (req.body.bmi && !isWithin(req.body.bmi, 10, 90)) return res.status(400).json({ error: 'Enter a valid BMI value' });
+  if (req.body.waistCm && !isWithin(req.body.waistCm, 30, 250)) return res.status(400).json({ error: 'Enter a valid waist measurement' });
   const log = {
     id: id('prog'),
     userId: req.user.id,

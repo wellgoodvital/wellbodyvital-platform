@@ -386,21 +386,110 @@ function emptyState(icon,title,body){
 function emptyInline(icon,title,body){
   return `<div style="text-align:center;padding:18px 10px"><i class="ti ${icon}" style="font-size:30px;color:var(--p);display:block;margin-bottom:8px"></i><div style="font-size:14px;font-weight:800;color:var(--navy);margin-bottom:4px">${safeText(title)}</div><p class="cap" style="line-height:1.6">${safeText(body)}</p></div>`;
 }
+const COUNTRY_DIALS = [
+  ['Afghanistan','+93'],['Albania','+355'],['Algeria','+213'],['Andorra','+376'],['Angola','+244'],['Antigua and Barbuda','+1-268'],['Argentina','+54'],['Armenia','+374'],['Australia','+61'],['Austria','+43'],['Azerbaijan','+994'],['Bahamas','+1-242'],['Bahrain','+973'],['Bangladesh','+880'],['Barbados','+1-246'],['Belarus','+375'],['Belgium','+32'],['Belize','+501'],['Benin','+229'],['Bhutan','+975'],['Bolivia','+591'],['Bosnia and Herzegovina','+387'],['Botswana','+267'],['Brazil','+55'],['Brunei','+673'],['Bulgaria','+359'],['Burkina Faso','+226'],['Burundi','+257'],['Cabo Verde','+238'],['Cambodia','+855'],['Cameroon','+237'],['Canada','+1'],['Central African Republic','+236'],['Chad','+235'],['Chile','+56'],['China','+86'],['Colombia','+57'],['Comoros','+269'],['Congo','+242'],['Costa Rica','+506'],["Cote d'Ivoire",'+225'],['Croatia','+385'],['Cuba','+53'],['Cyprus','+357'],['Czechia','+420'],['Democratic Republic of the Congo','+243'],['Denmark','+45'],['Djibouti','+253'],['Dominica','+1-767'],['Dominican Republic','+1-809'],['Ecuador','+593'],['Egypt','+20'],['El Salvador','+503'],['Equatorial Guinea','+240'],['Eritrea','+291'],['Estonia','+372'],['Eswatini','+268'],['Ethiopia','+251'],['Fiji','+679'],['Finland','+358'],['France','+33'],['Gabon','+241'],['Gambia','+220'],['Georgia','+995'],['Germany','+49'],['Ghana','+233'],['Greece','+30'],['Grenada','+1-473'],['Guatemala','+502'],['Guinea','+224'],['Guinea-Bissau','+245'],['Guyana','+592'],['Haiti','+509'],['Honduras','+504'],['Hungary','+36'],['Iceland','+354'],['India','+91'],['Indonesia','+62'],['Iran','+98'],['Iraq','+964'],['Ireland','+353'],['Israel','+972'],['Italy','+39'],['Jamaica','+1-876'],['Japan','+81'],['Jordan','+962'],['Kazakhstan','+7'],['Kenya','+254'],['Kiribati','+686'],['Kuwait','+965'],['Kyrgyzstan','+996'],['Laos','+856'],['Latvia','+371'],['Lebanon','+961'],['Lesotho','+266'],['Liberia','+231'],['Libya','+218'],['Liechtenstein','+423'],['Lithuania','+370'],['Luxembourg','+352'],['Madagascar','+261'],['Malawi','+265'],['Malaysia','+60'],['Maldives','+960'],['Mali','+223'],['Malta','+356'],['Marshall Islands','+692'],['Mauritania','+222'],['Mauritius','+230'],['Mexico','+52'],['Micronesia','+691'],['Moldova','+373'],['Monaco','+377'],['Mongolia','+976'],['Montenegro','+382'],['Morocco','+212'],['Mozambique','+258'],['Myanmar','+95'],['Namibia','+264'],['Nauru','+674'],['Nepal','+977'],['Netherlands','+31'],['New Zealand','+64'],['Nicaragua','+505'],['Niger','+227'],['Nigeria','+234'],['North Korea','+850'],['North Macedonia','+389'],['Norway','+47'],['Oman','+968'],['Pakistan','+92'],['Palau','+680'],['Palestine','+970'],['Panama','+507'],['Papua New Guinea','+675'],['Paraguay','+595'],['Peru','+51'],['Philippines','+63'],['Poland','+48'],['Portugal','+351'],['Qatar','+974'],['Romania','+40'],['Russia','+7'],['Rwanda','+250'],['Saint Kitts and Nevis','+1-869'],['Saint Lucia','+1-758'],['Saint Vincent and the Grenadines','+1-784'],['Samoa','+685'],['San Marino','+378'],['Sao Tome and Principe','+239'],['Saudi Arabia','+966'],['Senegal','+221'],['Serbia','+381'],['Seychelles','+248'],['Sierra Leone','+232'],['Singapore','+65'],['Slovakia','+421'],['Slovenia','+386'],['Solomon Islands','+677'],['Somalia','+252'],['South Africa','+27'],['South Korea','+82'],['South Sudan','+211'],['Spain','+34'],['Sri Lanka','+94'],['Sudan','+249'],['Suriname','+597'],['Sweden','+46'],['Switzerland','+41'],['Syria','+963'],['Taiwan','+886'],['Tajikistan','+992'],['Tanzania','+255'],['Thailand','+66'],['Timor-Leste','+670'],['Togo','+228'],['Tonga','+676'],['Trinidad and Tobago','+1-868'],['Tunisia','+216'],['Turkey','+90'],['Turkmenistan','+993'],['Tuvalu','+688'],['Uganda','+256'],['Ukraine','+380'],['United Arab Emirates','+971'],['United Kingdom','+44'],['United States','+1'],['Uruguay','+598'],['Uzbekistan','+998'],['Vanuatu','+678'],['Vatican City','+379'],['Venezuela','+58'],['Vietnam','+84'],['Yemen','+967'],['Zambia','+260'],['Zimbabwe','+263']
+].sort((a,b)=>a[0].localeCompare(b[0]));
 function countryOptions(selected='Nigeria'){
-  return [['Nigeria','+234'],['Ghana','+233'],['Kenya','+254'],['South Africa','+27'],['United Kingdom','+44'],['United States','+1']].map(([name,dial])=>`<option value="${name}" data-dial="${dial}" ${name===selected?'selected':''}>${name} (${dial})</option>`).join('');
+  return COUNTRY_DIALS.map(([name])=>`<option value="${name}" ${name===selected?'selected':''}>${name}</option>`).join('');
+}
+function dialCodeOptions(selected='Nigeria'){
+  return COUNTRY_DIALS.map(([name,dial])=>`<option value="${dial}" ${name===selected?'selected':''}>${name} (${dial})</option>`).join('');
 }
 function phoneFields(prefix='auth'){
-  return `<div class="fi"><label class="fl">Country</label><select class="inp" id="${prefix}-country" onchange="syncDial('${prefix}')">${countryOptions('Nigeria')}</select></div><div class="fi"><label class="fl">Phone Number</label><div style="display:flex;gap:8px"><input class="inp" id="${prefix}-dial" value="+234" readonly style="width:78px;flex-shrink:0;text-align:center;font-weight:800;color:var(--p)"><input class="inp" id="${prefix}-phone-local" type="tel" inputmode="tel" placeholder="800 000 0000" style="flex:1"></div></div>`;
+  return `<div class="fi"><label class="fl">Phone Number</label><div style="display:flex;gap:8px"><select class="inp" id="${prefix}-dial" style="width:132px;flex-shrink:0;font-weight:800;color:var(--p)">${dialCodeOptions('Nigeria')}</select><input class="inp" id="${prefix}-phone-local" type="tel" inputmode="tel" placeholder="800 000 0000" style="flex:1"></div></div>`;
 }
 function syncDial(prefix){
-  const sel=document.getElementById(`${prefix}-country`);
-  const dial=document.getElementById(`${prefix}-dial`);
-  if(sel&&dial) dial.value=sel.options[sel.selectedIndex]?.dataset.dial || '+234';
+  return prefix;
 }
 function composedPhone(prefix){
   const dial=document.getElementById(`${prefix}-dial`)?.value || '+234';
   const local=(document.getElementById(`${prefix}-phone-local`)?.value || '').replace(/[^\d]/g,'').replace(/^0+/,'');
   return local ? `${dial}${local}` : '';
+}
+function validEmail(email){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email||'')); }
+function markInvalid(id, invalid=true){ const el=document.getElementById(id); if(el){ el.style.borderColor=invalid?'var(--err)':''; el.setAttribute('aria-invalid', invalid?'true':'false'); } }
+function requireValue(id,label){
+  const value=document.getElementById(id)?.value?.trim();
+  markInvalid(id,!value);
+  if(!value) throw new Error(`${label} is required.`);
+  return value;
+}
+const PASSWORD_BLOCKLIST = ['password','password123','qwerty','qwerty123','12345678','123456789','11111111','admin123','letmein','welcome','wellbodyvital','nigeria'];
+function passwordPolicy(password, context={}){
+  const p=String(password||'');
+  const lower=p.toLowerCase();
+  const issues=[];
+  if(p.length<15) issues.push('Use at least 15 characters.');
+  if(p.length>128) issues.push('Use 128 characters or fewer.');
+  if(PASSWORD_BLOCKLIST.some(w=>lower.includes(w))) issues.push('Avoid common or easily guessed passwords.');
+  if(context.email && lower.includes(String(context.email).split('@')[0].toLowerCase())) issues.push('Do not include your email name.');
+  if(context.name && String(context.name).trim().split(/\s+/).some(part=>part.length>2 && lower.includes(part.toLowerCase()))) issues.push('Do not include your name.');
+  const variety=[/[a-z]/,/[A-Z]/,/[0-9]/,/[^A-Za-z0-9]/].reduce((n,re)=>n+(re.test(p)?1:0),0);
+  const score=Math.max(0, Math.min(4, (p.length>=15?2:0)+(p.length>=20?1:0)+(variety>=3?1:0)-(issues.length?1:0)));
+  return {ok:issues.length===0,score,issues,label:['Very weak','Weak','Fair','Strong','Very strong'][score]};
+}
+function renderPasswordStrength(){
+  const email=document.getElementById('auth-email')?.value || '';
+  const name=`${document.getElementById('first-name')?.value || ''} ${document.getElementById('last-name')?.value || ''}`.trim();
+  const result=passwordPolicy(document.getElementById('auth-password')?.value || '', {email,name});
+  const box=document.getElementById('password-strength');
+  if(!box) return result;
+  const color=['var(--err)','var(--err)','var(--warn)','var(--p)','var(--ok)'][result.score];
+  box.innerHTML=`<div style="display:flex;align-items:center;gap:8px;margin-top:8px"><div class="prog" style="flex:1;height:7px"><div class="pf" style="width:${(result.score+1)*20}%;background:${color}"></div></div><span style="font-size:11px;font-weight:800;color:${color}">${result.label}</span></div><div class="cap" style="margin-top:5px;line-height:1.55">${result.issues.length?result.issues.map(safeText).join(' '):'Good password. Long, memorable passphrases are welcome.'}</div>`;
+  return result;
+}
+function validateAuth(isLogin){
+  const email=requireValue('auth-email','Email address');
+  if(!validEmail(email)){ markInvalid('auth-email'); throw new Error('Enter a valid email address.'); }
+  const password=requireValue('auth-password','Password');
+  if(!isLogin){
+    const first=requireValue('first-name','First name');
+    const last=requireValue('last-name','Last name');
+    const phone=composedPhone('auth');
+    if(!phone || phone.replace(/[^\d]/g,'').length<7){ markInvalid('auth-phone-local'); throw new Error('Enter a valid phone number.'); }
+    const policy=passwordPolicy(password,{email,name:`${first} ${last}`});
+    renderPasswordStrength();
+    if(!policy.ok){ markInvalid('auth-password'); throw new Error(`Password is not strong enough. ${policy.issues.join(' ')}`); }
+    if(!document.getElementById('auth-consent')?.checked) throw new Error('Please accept the privacy and medical consent terms.');
+  }
+  return {email,password};
+}
+function validateOnboardingStep(step){
+  if(step===0){
+    requireValue('ob-dob','Date of birth');
+    requireValue('ob-country','Country');
+    requireValue('ob-state','State of residence');
+    requireValue('ob-address','Delivery address');
+  }
+  if(step===1){
+    const height=Number(requireValue('ob-height','Height'));
+    const weight=Number(requireValue('ob-weight','Weight'));
+    if(height<90 || height>240) throw new Error('Enter a valid height in centimetres.');
+    if(weight<30 || weight>300) throw new Error('Enter a valid weight in kilograms.');
+  }
+  if(step===2){
+    requireValue('emergency-name','Emergency contact name');
+    const phone=composedPhone('emergency');
+    if(!phone || phone.replace(/[^\d]/g,'').length<7){ markInvalid('emergency-phone-local'); throw new Error('Enter a valid emergency contact phone number.'); }
+  }
+  if(step===3 && ![...document.querySelectorAll('.ob-consent')].every(cb=>cb.checked)) throw new Error('Please accept all required consent records.');
+}
+function continueOnboarding(){
+  try{ validateOnboardingStep(S.step); setState({step:S.step+1}); }
+  catch(err){ toastError(err); }
+}
+function validateQuestionnaireStep(step){
+  if(step===0){
+    const weight=Number(requireValue('q-weight','Weight'));
+    const height=Number(requireValue('q-height','Height'));
+    if(weight<30 || weight>300) throw new Error('Enter a valid weight in kilograms.');
+    if(height<90 || height>240) throw new Error('Enter a valid height in centimetres.');
+  }
+  if(step===4 && !document.getElementById('q-final-consent')?.checked) throw new Error('Please confirm doctor review consent.');
+}
+function continueQuestionnaire(){
+  try{ validateQuestionnaireStep(S.qStep); setState({qStep:S.qStep+1}); }
+  catch(err){ toastError(err); }
 }
 function api(path, opts={}){
   return fetch(`${API_BASE}${path}`, {
@@ -587,12 +676,13 @@ function Auth(){
       ${S.error?`<div class="note nr" style="margin-bottom:14px"><i class="ti ti-alert-circle" style="color:var(--err)"></i><p style="font-size:12px;color:#7F1D1D;margin:0">${safeText(S.error)}</p></div>`:''}
       ${!isL?`<div class="g2"><div class="fi"><label class="fl">First Name</label><input class="inp" id="first-name" type="text" placeholder="First name"></div><div class="fi"><label class="fl">Last Name</label><input class="inp" id="last-name" type="text" placeholder="Last name"></div></div>`:''}
       <div class="fi"><label class="fl">Email Address</label><div class="iw"><i class="ti ti-mail ii"></i><input class="inp" id="auth-email" type="email" placeholder="you@email.com"></div></div>
-      ${!isL?phoneFields('auth'):''}
-      <div class="fi"><label class="fl">Password</label><div class="iw"><i class="ti ti-lock ii"></i><input class="inp" id="auth-password" type="password" placeholder="Min. 8 characters"></div></div>
+      ${!isL?`<div class="fi"><label class="fl">Country</label><select class="inp" id="auth-country">${countryOptions('Nigeria')}</select></div>${phoneFields('auth')}`:''}
+      <div class="fi"><label class="fl">Password</label><div class="iw"><i class="ti ti-lock ii"></i><input class="inp" id="auth-password" type="password" placeholder="${isL?'Password':'At least 15 characters'}" oninput="renderPasswordStrength()"></div>${!isL?`<div id="password-strength"></div>`:''}</div>
+      ${!isL?`<div class="fi"><label class="fl">Verification Method</label><select class="inp" id="verification-method"><option value="email" selected>Email verification</option><option value="whatsapp">WhatsApp verification</option><option value="sms">SMS fallback</option><option value="auth_app">Authentication app</option></select><div class="cap" style="margin-top:5px;line-height:1.55">Email is the default. For phone verification, WhatsApp is attempted before SMS.</div></div>`:''}
       ${!isL?`<div class="note nt" style="margin-bottom:14px"><label style="display:flex;gap:9px;align-items:flex-start;cursor:pointer;width:100%"><input type="checkbox" id="auth-consent" checked style="margin-top:3px;flex-shrink:0"><span style="font-size:12px;color:var(--navy);line-height:1.6">I agree to WellBodyVital's <strong>Terms of Service</strong> and <strong>Privacy Policy</strong>, and consent to my medical data being handled per NDPR guidelines.</span></label></div>`:''}
       <button class="btn bc" style="margin-bottom:14px" onclick="doAuth()"><i class="ti ti-${S.loading?'loader-2':isL?'login':'heart-plus'}"></i> ${S.loading?'Please wait...':isL?'Log In':'Start My Wellness Journey'}</button>
       <div class="dor">or continue with</div>
-      <button class="btn bo" style="margin-bottom:14px;gap:9px">
+      <button class="btn bo" style="margin-bottom:14px;gap:9px" onclick="toastError(new Error('Google sign-in is not connected yet. Use email and password while OAuth is configured securely on the server.'))">
         <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
         Continue with Google
       </button>
@@ -603,10 +693,8 @@ function Auth(){
 }
 async function doAuth(){
   const isLogin = S.screen==='login';
-  const email = document.getElementById('auth-email')?.value.trim();
-  const password = document.getElementById('auth-password')?.value;
-  if(!email || !password) return toastError(new Error('Enter your email and password.'));
-  if(!isLogin && !document.getElementById('auth-consent')?.checked) return toastError(new Error('Please accept the privacy and medical consent terms.'));
+  let email, password;
+  try{ ({email,password}=validateAuth(isLogin)); }catch(err){ return toastError(err); }
   setState({loading:true,error:null});
   try{
     if(isLogin){
@@ -614,7 +702,7 @@ async function doAuth(){
       AUTH.set(result); S.user=result.user;
     }else{
       const name = `${document.getElementById('first-name')?.value.trim()||''} ${document.getElementById('last-name')?.value.trim()||''}`.trim();
-      await api('/auth/register',{method:'POST',body:JSON.stringify({role:'patient',name,email,password,phone:composedPhone('auth'),country:document.getElementById('auth-country')?.value || 'Nigeria'})});
+      await api('/auth/register',{method:'POST',body:JSON.stringify({role:'patient',name,email,password,phone:composedPhone('auth'),country:document.getElementById('auth-country')?.value || 'Nigeria',verificationMethod:document.getElementById('verification-method')?.value || 'email'})});
       const result = await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});
       AUTH.set(result); S.user=result.user;
     }
@@ -629,10 +717,10 @@ function Onboarding(){
   const steps=['Personal Details','Body &amp; Goals','Emergency Contact','Health Consent'];
   const s=S.step;
   const c=[
-    `<div class="g2"><div class="fi"><label class="fl">Date of Birth</label><input class="inp" type="date" value="1990-06-15"></div><div class="fi"><label class="fl">Gender</label><select class="inp"><option>Female</option><option>Male</option><option>Non-binary</option><option>Prefer not to say</option></select></div></div><div class="fi"><label class="fl">Country</label><select class="inp">${countryOptions('Nigeria')}</select></div><div class="fi"><label class="fl">State of Residence</label><select class="inp"><option>Lagos</option><option>Abuja (FCT)</option><option>Kano</option><option>Rivers</option><option>Ogun</option><option>Delta</option><option>Anambra</option><option>Oyo</option><option>Enugu</option></select></div><div class="fi"><label class="fl">Delivery Address</label><textarea class="inp" rows="3" placeholder="Full delivery address for pharmacy orders..."></textarea></div>`,
-    `<div class="g2"><div class="fi"><label class="fl">Height (cm)</label><input class="inp" type="number" value="165"></div><div class="fi"><label class="fl">Weight (kg)</label><input class="inp" type="number" value="98"></div></div><div class="cteal" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px"><span style="font-size:13px;font-weight:700;color:var(--navy)">Your BMI</span><span class="badge bwarn">36.0 — Obese II</span></div><div class="prog plg" style="margin-bottom:7px"><div class="pf" style="width:72%;background:var(--warn)"></div></div><p style="font-size:12px;color:var(--p);margin:0">BMI &#8805; 30 qualifies you for our medical wellness evaluation.</p></div><div class="fi"><label class="fl">Wellness Goal</label><select class="inp"><option>Lose weight &amp; improve metabolic health</option><option>Improve energy &amp; daily vitality</option><option>Manage blood sugar / diabetes risk</option><option>Build healthy long-term habits</option><option>All of the above</option></select></div><div class="fi"><label class="fl">Timeline</label><select class="inp"><option>3 months</option><option>6 months</option><option selected>12 months</option><option>Ongoing lifestyle change</option></select></div>`,
-    `<div class="note nt" style="margin-bottom:14px"><i class="ti ti-heart" style="color:var(--p);font-size:15px;flex-shrink:0;margin-top:1px"></i><p style="font-size:13px;color:var(--navy);margin:0">In a medical emergency, we will contact this person on your behalf immediately.</p></div><div class="fi"><label class="fl">Contact Full Name</label><input class="inp" type="text" placeholder="Full name"></div><div class="fi"><label class="fl">Relationship</label><select class="inp"><option>Spouse</option><option>Parent</option><option>Sibling</option><option>Friend</option></select></div>${phoneFields('emergency')}`,
-    `${[['Medical Data Consent','I consent to WellBodyVital collecting and processing my medical data for healthcare delivery under NDPR guidelines.'],['Telehealth Consent','Consultations are conducted remotely via secure video/chat with MDCN-licensed physicians.'],['Privacy Policy','I agree to WellBodyVital\'s Privacy Policy and data handling practices.'],['Terms of Service','I agree to WellBodyVital\'s Terms including subscription, cancellation, and refund policies.'],['Rx Acknowledgement','Prescription decisions (including GLP-1) are made solely by licensed doctors and are not guaranteed.']].map(([t,d])=>`<div class="ropt"><input type="checkbox" checked><div><div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:2px">${t}</div><div style="font-size:12px;color:var(--nm);line-height:1.55">${d}</div></div></div>`).join('')}`
+    `<div class="g2"><div class="fi"><label class="fl">Date of Birth</label><input class="inp" id="ob-dob" type="date"></div><div class="fi"><label class="fl">Gender</label><select class="inp" id="ob-gender"><option value="">Select gender</option><option>Female</option><option>Male</option><option>Non-binary</option><option>Prefer not to say</option></select></div></div><div class="fi"><label class="fl">Country</label><select class="inp" id="ob-country">${countryOptions('Nigeria')}</select></div><div class="fi"><label class="fl">State of Residence</label><select class="inp" id="ob-state"><option value="">Select state</option><option>Lagos</option><option>Abuja (FCT)</option><option>Kano</option><option>Rivers</option><option>Ogun</option><option>Delta</option><option>Anambra</option><option>Oyo</option><option>Enugu</option></select></div><div class="fi"><label class="fl">Delivery Address</label><textarea class="inp" id="ob-address" rows="3" placeholder="Full delivery address for pharmacy orders..."></textarea></div>`,
+    `<div class="g2"><div class="fi"><label class="fl">Height (cm)</label><input class="inp" id="ob-height" type="number" placeholder="165"></div><div class="fi"><label class="fl">Weight (kg)</label><input class="inp" id="ob-weight" type="number" placeholder="98"></div></div><div class="fi"><label class="fl">Wellness Goal</label><select class="inp" id="ob-goal"><option value="">Select goal</option><option>Lose weight &amp; improve metabolic health</option><option>Improve energy &amp; daily vitality</option><option>Manage blood sugar / diabetes risk</option><option>Build healthy long-term habits</option><option>All of the above</option></select></div><div class="fi"><label class="fl">Timeline</label><select class="inp" id="ob-timeline"><option value="">Select timeline</option><option>3 months</option><option>6 months</option><option>12 months</option><option>Ongoing lifestyle change</option></select></div>`,
+    `<div class="note nt" style="margin-bottom:14px"><i class="ti ti-heart" style="color:var(--p);font-size:15px;flex-shrink:0;margin-top:1px"></i><p style="font-size:13px;color:var(--navy);margin:0">In a medical emergency, we will contact this person on your behalf immediately.</p></div><div class="fi"><label class="fl">Contact Full Name</label><input class="inp" id="emergency-name" type="text" placeholder="Full name"></div><div class="fi"><label class="fl">Relationship</label><select class="inp" id="emergency-relationship"><option value="">Select relationship</option><option>Spouse</option><option>Parent</option><option>Sibling</option><option>Friend</option></select></div>${phoneFields('emergency')}`,
+    `${[['Medical Data Consent','I consent to WellBodyVital collecting and processing my medical data for healthcare delivery under NDPR guidelines.'],['Telehealth Consent','Consultations are conducted remotely via secure video/chat with MDCN-licensed physicians.'],['Privacy Policy','I agree to WellBodyVital\'s Privacy Policy and data handling practices.'],['Terms of Service','I agree to WellBodyVital\'s Terms including subscription, cancellation, and refund policies.'],['Rx Acknowledgement','Prescription decisions (including GLP-1) are made solely by licensed doctors and are not guaranteed.']].map(([t,d])=>`<div class="ropt"><input class="ob-consent" type="checkbox"><div><div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:2px">${t}</div><div style="font-size:12px;color:var(--nm);line-height:1.55">${d}</div></div></div>`).join('')}`
   ];
   return `<div>
     <div style="padding:16px 20px 0;background:var(--bgc);border-bottom:1px solid var(--gray);position:sticky;top:0;z-index:40">
@@ -644,7 +732,7 @@ function Onboarding(){
       ${c[s]}
       <div style="display:flex;gap:12px;margin-top:10px">
         ${s>0?`<button class="btn bgh" style="width:auto;padding:0 20px;flex-shrink:0" onclick="setState({step:${s-1}})">&#8592; Back</button>`:''}
-        <button class="btn bp" onclick="${s<3?`setState({step:${s+1}})`:`go('plans')`}">${s<3?'Continue &#8594;':'View Wellness Plans &#8594;'}</button>
+        <button class="btn bp" onclick="${s<3?`continueOnboarding()`:`try{validateOnboardingStep(3);go('plans')}catch(err){toastError(err)}`}">${s<3?'Continue &#8594;':'View Wellness Plans &#8594;'}</button>
       </div>
     </div>
   </div>`;
@@ -729,11 +817,11 @@ function Questionnaire(){
   const q=S.qStep;
   const secs=[{t:'Current Health',s:'Metabolic baseline &amp; goals'},{t:'Medical History',s:'Past &amp; present conditions'},{t:'Medications &amp; Allergies',s:'Current treatments'},{t:'Lifestyle Profile',s:'Habits, sleep &amp; stress'},{t:'Doctor Review Consent',s:'Finalise &amp; submit'}];
   const c=[
-    `<div class="g2"><div class="fi"><label class="fl">Weight (kg)</label><input class="inp" id="q-weight" type="number" value="98"></div><div class="fi"><label class="fl">Height (cm)</label><input class="inp" id="q-height" type="number" value="165"></div></div><div class="cteal" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--navy)">Calculated BMI</span><span class="badge bwarn">36.0 — Obese</span></div><div class="prog plg" style="margin-bottom:7px"><div class="pf" style="width:72%;background:var(--warn)"></div></div><p style="font-size:12px;color:var(--p);margin:0">BMI &#8805; 30 qualifies you for medical evaluation.</p></div><div class="fi"><label class="fl">Primary Goal</label><select class="inp" id="q-goal"><option>Lose weight &amp; improve metabolic markers</option><option>Increase energy &amp; focus</option><option>Better blood sugar control</option><option>All of the above</option></select></div><div class="fi"><label class="fl">Previous attempts</label><select class="inp"><option>Yes, diet &amp; exercise only</option><option>Yes, with medications</option><option>Yes, bariatric surgery</option><option>No previous attempts</option></select></div>`,
+    `<div class="g2"><div class="fi"><label class="fl">Weight (kg)</label><input class="inp" id="q-weight" type="number" placeholder="98"></div><div class="fi"><label class="fl">Height (cm)</label><input class="inp" id="q-height" type="number" placeholder="165"></div></div><div class="fi"><label class="fl">Primary Goal</label><select class="inp" id="q-goal"><option value="">Select goal</option><option>Lose weight &amp; improve metabolic markers</option><option>Increase energy &amp; focus</option><option>Better blood sugar control</option><option>All of the above</option></select></div><div class="fi"><label class="fl">Previous attempts</label><select class="inp" id="q-attempts"><option value="">Select answer</option><option>Yes, diet &amp; exercise only</option><option>Yes, with medications</option><option>Yes, bariatric surgery</option><option>No previous attempts</option></select></div>`,
     `${[['Type 2 Diabetes or pre-diabetes','D'],['High blood pressure (Hypertension)','H'],['Thyroid disease','T'],['Kidney or liver disease','K'],['Pancreatitis history','P'],['Heart disease or stroke','C']].map(([q2,n])=>`<div style="background:var(--bga);border-radius:var(--rmd);padding:13px;margin-bottom:10px"><div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:9px">${q2}</div><div style="display:flex;gap:8px">${['Yes','No'].map((t,i)=>`<label style="flex:1;display:flex;align-items:center;gap:6px;background:var(--bgc);border:1.5px solid var(--gray);border-radius:8px;padding:9px 12px;cursor:pointer"><input type="radio" name="${n}" ${i===1?'checked':''} style="accent-color:var(--p)"> <span style="font-size:13px">${t}</span></label>`).join('')}</div></div>`).join('')}`,
     `<div class="fi"><label class="fl">Current Medications</label><textarea class="inp" rows="3" placeholder="Names and dosages..."></textarea></div><div class="fi"><label class="fl">Known Allergies</label><textarea class="inp" rows="2" placeholder="Drug, food, or environmental..."></textarea></div><div class="fi"><label class="fl">Previous Weight Loss Meds</label><select class="inp"><option>None</option><option>Orlistat</option><option>Phentermine</option><option>GLP-1 (Ozempic/Wegovy/Saxenda)</option><option>Other</option></select></div><div style="background:var(--bga);border-radius:var(--rmd);padding:13px"><div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:9px">Pregnancy / Breastfeeding status</div><div style="display:flex;gap:7px">${['Pregnant','Breastfeeding','Neither / N/A'].map((t,i)=>`<label style="flex:1;display:flex;align-items:center;gap:5px;background:var(--bgc);border:1.5px solid var(--gray);border-radius:8px;padding:9px 8px;cursor:pointer;font-size:11px"><input type="radio" name="preg" ${i===2?'checked':''} style="accent-color:var(--p)"> ${t}</label>`).join('')}</div></div>`,
     `<div class="fi"><label class="fl">Exercise frequency</label><select class="inp"><option>Sedentary</option><option>1-2x/week</option><option>3-4x/week</option><option>5+/week</option></select></div><div class="fi"><label class="fl">Eating pattern</label><select class="inp"><option selected>Mixed / no specific diet</option><option>High carbohydrate</option><option>Low carb / Keto</option><option>Vegetarian</option><option>Vegan</option></select></div><div class="fi"><label class="fl">Daily water intake</label><select class="inp"><option>Less than 1 litre</option><option selected>1-2 litres</option><option>2-3 litres</option><option>3+ litres</option></select></div><div class="fi"><label class="fl">Average sleep</label><select class="inp"><option selected>Less than 6 hours</option><option>6-7 hours</option><option>7-8 hours</option><option>8+ hours</option></select></div><div class="fi"><label class="fl">Stress level</label><select class="inp"><option>Low</option><option selected>Moderate</option><option>High</option><option>Very high</option></select></div>`,
-    `<div class="cteal" style="text-align:center;padding:22px;margin-bottom:14px"><i class="ti ti-circle-check" style="color:var(--p);font-size:42px;margin-bottom:11px;display:block"></i><h2 style="font-size:17px;color:var(--navy);margin-bottom:5px">Wellness Intake Complete</h2><p style="font-size:13px;color:var(--p)">A licensed physician will review your submission within 24 hours.</p></div><div class="note ny" style="margin-bottom:14px"><i class="ti ti-alert-triangle" style="color:var(--warn);font-size:15px;flex-shrink:0;margin-top:1px"></i><p style="font-size:11px;color:#78350F;margin:0;line-height:1.65"><strong>Clinical Disclosure:</strong> All prescription decisions are made solely by MDCN-licensed doctors. Prescription not guaranteed. No specific wellness outcomes guaranteed.</p></div><div class="ropt"><input type="checkbox" checked><span style="font-size:13px;color:var(--nm);line-height:1.6">I confirm I understand that prescription decisions are made only by licensed physicians, and WellBodyVital does not guarantee any specific treatment or outcome.</span></div>`
+    `<div class="cteal" style="text-align:center;padding:22px;margin-bottom:14px"><i class="ti ti-circle-check" style="color:var(--p);font-size:42px;margin-bottom:11px;display:block"></i><h2 style="font-size:17px;color:var(--navy);margin-bottom:5px">Wellness Intake Complete</h2><p style="font-size:13px;color:var(--p)">A licensed physician will review your submission within 24 hours.</p></div><div class="note ny" style="margin-bottom:14px"><i class="ti ti-alert-triangle" style="color:var(--warn);font-size:15px;flex-shrink:0;margin-top:1px"></i><p style="font-size:11px;color:#78350F;margin:0;line-height:1.65"><strong>Clinical Disclosure:</strong> All prescription decisions are made solely by MDCN-licensed doctors. Prescription not guaranteed. No specific wellness outcomes guaranteed.</p></div><div class="ropt"><input id="q-final-consent" type="checkbox"><span style="font-size:13px;color:var(--nm);line-height:1.6">I confirm I understand that prescription decisions are made only by licensed physicians, and WellBodyVital does not guarantee any specific treatment or outcome.</span></div>`
   ];
   const sec=secs[q];
   return `<div>
@@ -745,13 +833,14 @@ function Questionnaire(){
       ${c[q]}
       <div style="display:flex;gap:12px;margin-top:12px">
         ${q>0?`<button class="btn bgh" style="width:auto;padding:0 18px;flex-shrink:0" onclick="setState({qStep:${q-1}})">&#8592; Back</button>`:`<button class="btn bgh" style="width:auto;padding:0 18px;flex-shrink:0" onclick="go('plans')">&#8592; Plans</button>`}
-        <button class="btn bp" onclick="${q<4?`setState({qStep:${q+1}})`:`finishQ()`}">${q<4?'Continue &#8594;':'Submit to Doctor &#8594;'}</button>
+        <button class="btn bp" onclick="${q<4?`continueQuestionnaire()`:`finishQ()`}">${q<4?'Continue &#8594;':'Submit to Doctor &#8594;'}</button>
       </div>
     </div>
   </div>`;
 }
 async function finishQ(){
   if(!requireAuth('questionnaire')) return;
+  try{ validateQuestionnaireStep(S.qStep); }catch(err){ return toastError(err); }
   setState({loading:true,error:null});
   try{
     await api('/questionnaire',{method:'POST',body:JSON.stringify({
