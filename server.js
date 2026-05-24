@@ -270,15 +270,30 @@ function summaryStats(db) {
   };
 }
 
+function currentSubscriptionFor(db, userId) {
+  return db.subscriptions.find((sub) => sub.userId === userId && sub.status === 'active')
+    || db.subscriptions.find((sub) => sub.userId === userId)
+    || null;
+}
+
+function questionnaireForResponse(questionnaire) {
+  if (!questionnaire) return null;
+  return {
+    ...questionnaire,
+    medicalPayload: questionnaire.encryptedMedicalPayload ? decryptField(questionnaire.encryptedMedicalPayload) : null,
+    encryptedMedicalPayload: undefined,
+  };
+}
+
 function seedData() {
   const createdAt = now();
   const users = [
-    { id: 'usr_super', role: 'super_admin', name: 'Ade WellBody', email: 'super@wellbodyvital.com', phone: '+2348000000001', status: 'active', passwordHash: passwordHash('password123'), createdAt },
-    { id: 'usr_ops', role: 'operations', name: 'Operations Lead', email: 'ops@wellbodyvital.com', phone: '+2348000000002', status: 'active', passwordHash: passwordHash('password123'), createdAt },
-    { id: 'usr_doctor', role: 'doctor', name: 'Dr. Kemi Adeyemi', email: 'doctor@wellbodyvital.com', phone: '+2348000000003', status: 'pending_verification', passwordHash: passwordHash('password123'), createdAt },
-    { id: 'usr_pharmacy', role: 'pharmacy', name: 'MedPlus Lekki Pharmacy', email: 'pharmacy@wellbodyvital.com', phone: '+2348000000004', status: 'pending_verification', passwordHash: passwordHash('password123'), createdAt },
-    { id: 'usr_patient', role: 'patient', name: 'Amara Okafor', email: 'patient@wellbodyvital.com', phone: '+2348000000005', status: 'active', passwordHash: passwordHash('password123'), createdAt },
-    { id: 'usr_patient2', role: 'patient', name: 'Tunde Balogun', email: 'tunde@example.com', phone: '+2348000000006', status: 'active', passwordHash: passwordHash('password123'), createdAt },
+    { id: 'usr_super', role: 'super_admin', name: 'Ade WellBody', email: 'super@wellbodyvital.com', phone: '+2348000000001', country: 'Nigeria', status: 'active', passwordHash: passwordHash('password123'), createdAt },
+    { id: 'usr_ops', role: 'operations', name: 'Operations Lead', email: 'ops@wellbodyvital.com', phone: '+2348000000002', country: 'Nigeria', status: 'active', passwordHash: passwordHash('password123'), createdAt },
+    { id: 'usr_doctor', role: 'doctor', name: 'Dr. Kemi Adeyemi', email: 'doctor@wellbodyvital.com', phone: '+2348000000003', country: 'Nigeria', status: 'pending_verification', passwordHash: passwordHash('password123'), createdAt },
+    { id: 'usr_pharmacy', role: 'pharmacy', name: 'MedPlus Lekki Pharmacy', email: 'pharmacy@wellbodyvital.com', phone: '+2348000000004', country: 'Nigeria', status: 'pending_verification', passwordHash: passwordHash('password123'), createdAt },
+    { id: 'usr_patient', role: 'patient', name: 'Amara Okafor', email: 'patient@wellbodyvital.com', phone: '+2348000000005', country: 'Nigeria', status: 'active', passwordHash: passwordHash('password123'), createdAt },
+    { id: 'usr_patient2', role: 'patient', name: 'Tunde Balogun', email: 'tunde@example.com', phone: '+2348000000006', country: 'Nigeria', status: 'active', passwordHash: passwordHash('password123'), createdAt },
   ];
 
   const plans = [
@@ -347,6 +362,11 @@ function seedData() {
       { id: 'consent_001', userId: 'usr_patient', type: 'Medical Data Consent', version: '2026.1', accepted: true, acceptedAt: createdAt },
       { id: 'consent_002', userId: 'usr_patient', type: 'Telehealth Consent', version: '2026.1', accepted: true, acceptedAt: createdAt },
     ],
+    progressLogs: [
+      { id: 'prog_001', userId: 'usr_patient', weightKg: 92, bmi: 33.4, waistCm: 101, notes: 'Starting baseline', loggedAt: '2026-05-01T09:00:00.000Z' },
+      { id: 'prog_002', userId: 'usr_patient', weightKg: 89.8, bmi: 32.6, waistCm: 98, notes: 'First follow-up', loggedAt: '2026-05-15T09:00:00.000Z' },
+      { id: 'prog_003', userId: 'usr_patient', weightKg: 88.5, bmi: 32.1, waistCm: 96, notes: 'Steady progress', loggedAt: '2026-05-23T09:00:00.000Z' },
+    ],
     auditLogs: [
       { id: 'audit_seed', actorUserId: 'system', actorRole: 'system', action: 'seed_created', entityType: 'database', entityId: 'wbv-db', details: { source: 'server bootstrap' }, createdAt },
     ],
@@ -405,6 +425,7 @@ app.post('/api/auth/register', (req, res) => {
     name: req.body.name || `${req.body.firstName || ''} ${req.body.lastName || ''}`.trim() || 'New User',
     email: req.body.email,
     phone: req.body.phone || '',
+    country: req.body.country || 'Nigeria',
     status: role === 'patient' ? 'active' : 'pending_verification',
     passwordHash: passwordHash(req.body.password || 'password123'),
     createdAt: now(),
@@ -503,7 +524,9 @@ app.get('/api/schema', auth, allow('super_admin', 'operations'), (req, res) => {
 });
 
 app.get('/api/user/profile', auth, (req, res) => {
-  res.json({ user: publicUser(req.user), plan: 'pro' });
+  const subscription = currentSubscriptionFor(req.db, req.user.id);
+  const plan = subscription ? byId(req.db.plans, subscription.planId) : null;
+  res.json({ user: publicUser(req.user), subscription, plan });
 });
 
 app.put('/api/user/profile', auth, (req, res) => {
@@ -513,6 +536,38 @@ app.put('/api/user/profile', auth, (req, res) => {
   });
   audit(req.db, req.user, 'profile_update', 'user', req.user.id);
   saveAndSend(req, res, { success: true, user: publicUser(req.user) });
+});
+
+app.get('/api/customer/dashboard', auth, allow('patient'), (req, res) => {
+  const subscription = currentSubscriptionFor(req.db, req.user.id);
+  const plan = subscription ? byId(req.db.plans, subscription.planId) : null;
+  const questionnaire = questionnaireForResponse(req.db.questionnaires.find((item) => item.userId === req.user.id));
+  const progressLogs = (req.db.progressLogs || []).filter((item) => item.userId === req.user.id);
+  const consultations = req.db.consultations.filter((item) => item.patientId === req.user.id).map((item) => {
+    const doctor = byId(req.db.users, item.doctorId);
+    const profile = req.db.doctorProfiles.find((profileItem) => profileItem.userId === item.doctorId);
+    return {
+      ...item,
+      doctorName: doctor?.name || 'Assigned Doctor',
+      specialty: profile?.specialty || 'Medical review',
+      scheduledAt: item.followUpAt,
+      notes: item.recommendation || '',
+    };
+  });
+  const prescriptions = req.db.prescriptions.filter((item) => item.patientId === req.user.id);
+  const orders = req.db.orders.filter((item) => item.patientId === req.user.id);
+  const notifications = req.db.notifications.filter((item) => item.userId === req.user.id);
+  res.json({
+    user: publicUser(req.user),
+    subscription,
+    plan,
+    questionnaire,
+    progressLogs,
+    consultations,
+    prescriptions,
+    orders,
+    notifications,
+  });
 });
 
 app.get('/api/plans', (req, res) => {
@@ -604,8 +659,7 @@ app.post('/api/questionnaire', auth, (req, res) => {
 
 app.get('/api/questionnaire', auth, (req, res) => {
   const questionnaire = req.db.questionnaires.find((item) => item.userId === req.user.id);
-  const payload = questionnaire?.encryptedMedicalPayload ? decryptField(questionnaire.encryptedMedicalPayload) : null;
-  res.json({ completed: Boolean(questionnaire), questionnaire: questionnaire ? { ...questionnaire, medicalPayload: payload } : null });
+  res.json({ completed: Boolean(questionnaire), questionnaire: questionnaireForResponse(questionnaire) });
 });
 
 app.post('/api/documents/upload', auth, (req, res) => {
@@ -634,15 +688,28 @@ app.get('/api/documents', auth, (req, res) => {
 });
 
 app.get('/api/progress', auth, (req, res) => {
+  const logs = (req.db.progressLogs || []).filter((item) => item.userId === req.user.id).sort((a, b) => new Date(a.loggedAt) - new Date(b.loggedAt));
   res.json({
-    weights: [{ date: '2026-05-01', kg: 92 }, { date: '2026-05-15', kg: 89.8 }, { date: '2026-05-23', kg: 88.5 }],
-    bmi: [{ date: '2026-05-01', value: 33.4 }, { date: '2026-05-23', value: 32.1 }],
+    logs,
+    weights: logs.map((item) => ({ date: item.loggedAt.slice(0, 10), kg: item.weightKg })),
+    bmi: logs.map((item) => ({ date: item.loggedAt.slice(0, 10), value: item.bmi })),
   });
 });
 
 app.post('/api/progress/log', auth, (req, res) => {
-  audit(req.db, req.user, 'progress_logged', 'user', req.user.id, { weightKg: req.body.weightKg });
-  saveAndSend(req, res, { logged: true });
+  const log = {
+    id: id('prog'),
+    userId: req.user.id,
+    weightKg: money(req.body.weightKg),
+    bmi: req.body.bmi ? money(req.body.bmi) : null,
+    waistCm: req.body.waistCm ? money(req.body.waistCm) : null,
+    notes: req.body.notes || '',
+    loggedAt: now(),
+  };
+  req.db.progressLogs = req.db.progressLogs || [];
+  req.db.progressLogs.push(log);
+  audit(req.db, req.user, 'progress_logged', 'user', req.user.id, { weightKg: log.weightKg });
+  saveAndSend(req, res, { logged: true, log });
 });
 
 app.get('/api/notifications', auth, (req, res) => {
@@ -902,8 +969,15 @@ app.get('/api/pharmacy/dashboard', auth, allow('pharmacy', 'super_admin', 'opera
 });
 
 app.get('/api/pharmacy/orders', auth, (req, res) => {
-  const pharmacyId = req.user.role === 'pharmacy' ? req.user.id : req.query.pharmacyId;
-  const orders = req.db.orders.filter((order) => !pharmacyId || order.pharmacyId === pharmacyId);
+  let orders = [];
+  if (req.user.role === 'patient') {
+    orders = req.db.orders.filter((order) => order.patientId === req.user.id);
+  } else if (req.user.role === 'pharmacy') {
+    orders = req.db.orders.filter((order) => order.pharmacyId === req.user.id);
+  } else if (['operations', 'super_admin'].includes(req.user.role)) {
+    const pharmacyId = req.query.pharmacyId;
+    orders = req.db.orders.filter((order) => !pharmacyId || order.pharmacyId === pharmacyId);
+  }
   res.json({ orders });
 });
 

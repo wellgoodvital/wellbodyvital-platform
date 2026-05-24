@@ -352,11 +352,8 @@ input[type=checkbox],input[type=radio] { accent-color:var(--p); margin-top:2px; 
 ========================================================== */
 const S = {
   screen:'landing', plan:'pro', step:0, qStep:0, payMethod:'card', modal:null,
-  loading:false, error:null, user:null, subscription:null, plans:null, progress:null, notifications:null,
-  chat:[
-    {from:'doc', text:'Hello Amara! I reviewed your wellness intake. Your metabolic profile shows great potential. Welcome to WellBodyVital — we are glad you are here!', time:'10:32 AM'},
-    {from:'doc', text:'Before we proceed, could you share your most recent blood pressure readings and fasting glucose if available?', time:'10:34 AM'}
-  ]
+  loading:false, error:null, fileWarning:false, user:null, dashboard:null, subscription:null, plans:null, progress:null, notifications:null,
+  chat:[]
 };
 const WITH_NAV = ['dashboard','progress','doctor','pharmacy','profile','notifications'];
 const API_BASE = '/api/v1';
@@ -372,6 +369,39 @@ const AUTH = {
 
 function setState(u){ Object.assign(S,u); render(); }
 function safeText(v){ return String(v ?? '').replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+function money(v){ return Number(v||0).toLocaleString('en-NG'); }
+function parseAppDate(v){ return /^\d{4}-\d{2}-\d{2}$/.test(String(v||'')) ? new Date(`${v}T12:00:00`) : new Date(v); }
+function fmtDate(v){ return v ? parseAppDate(v).toLocaleDateString('en-NG', {day:'numeric', month:'short', year:'numeric'}) : 'Not set'; }
+function fmtShortDate(v){ return v ? parseAppDate(v).toLocaleDateString('en-NG', {day:'numeric', month:'short'}) : 'Not set'; }
+function titleCase(v){ return String(v||'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()); }
+function currentPlan(){ return S.dashboard?.plan || (S.subscription ? (S.plans||[]).find(p=>p.id===S.subscription.planId || p.slug===S.subscription.planId) : null); }
+function currentSubscription(){ return S.dashboard?.subscription || S.subscription || null; }
+function patientDoctor(){
+  const c = S.dashboard?.consultations?.[0];
+  return c ? {id:c.doctorId,name:c.doctorName||'Assigned Doctor',specialty:c.specialty||'Medical review',next:c.scheduledAt,note:c.notes,status:c.status} : null;
+}
+function emptyState(icon,title,body){
+  return `<div class="card" style="text-align:center;padding:22px 16px"><i class="ti ${icon}" style="font-size:34px;color:var(--p);display:block;margin-bottom:9px"></i><div style="font-size:14px;font-weight:800;color:var(--navy);margin-bottom:4px">${safeText(title)}</div><p class="cap" style="line-height:1.6">${safeText(body)}</p></div>`;
+}
+function emptyInline(icon,title,body){
+  return `<div style="text-align:center;padding:18px 10px"><i class="ti ${icon}" style="font-size:30px;color:var(--p);display:block;margin-bottom:8px"></i><div style="font-size:14px;font-weight:800;color:var(--navy);margin-bottom:4px">${safeText(title)}</div><p class="cap" style="line-height:1.6">${safeText(body)}</p></div>`;
+}
+function countryOptions(selected='Nigeria'){
+  return [['Nigeria','+234'],['Ghana','+233'],['Kenya','+254'],['South Africa','+27'],['United Kingdom','+44'],['United States','+1']].map(([name,dial])=>`<option value="${name}" data-dial="${dial}" ${name===selected?'selected':''}>${name} (${dial})</option>`).join('');
+}
+function phoneFields(prefix='auth'){
+  return `<div class="fi"><label class="fl">Country</label><select class="inp" id="${prefix}-country" onchange="syncDial('${prefix}')">${countryOptions('Nigeria')}</select></div><div class="fi"><label class="fl">Phone Number</label><div style="display:flex;gap:8px"><input class="inp" id="${prefix}-dial" value="+234" readonly style="width:78px;flex-shrink:0;text-align:center;font-weight:800;color:var(--p)"><input class="inp" id="${prefix}-phone-local" type="tel" inputmode="tel" placeholder="800 000 0000" style="flex:1"></div></div>`;
+}
+function syncDial(prefix){
+  const sel=document.getElementById(`${prefix}-country`);
+  const dial=document.getElementById(`${prefix}-dial`);
+  if(sel&&dial) dial.value=sel.options[sel.selectedIndex]?.dataset.dial || '+234';
+}
+function composedPhone(prefix){
+  const dial=document.getElementById(`${prefix}-dial`)?.value || '+234';
+  const local=(document.getElementById(`${prefix}-phone-local`)?.value || '').replace(/[^\d]/g,'').replace(/^0+/,'');
+  return local ? `${dial}${local}` : '';
+}
 function api(path, opts={}){
   return fetch(`${API_BASE}${path}`, {
     ...opts,
@@ -393,14 +423,16 @@ function requireAuth(next='dashboard'){ if(!AUTH.access){ go('login'); return fa
 async function hydrateApp(){
   if(!AUTH.access) return;
   try{
-    const [me, progress, notifications, messages] = await Promise.all([
+    const [me, dashboard, progress, notifications, messages] = await Promise.all([
       api('/auth/me'),
+      api('/customer/dashboard').catch(()=>null),
       api('/progress').catch(()=>null),
       api('/notifications').catch(()=>({notifications:[]})),
       api('/messages').catch(()=>({messages:[]})),
     ]);
-    const chat = (messages.messages||[]).map(m=>({from:m.fromUserId==='usr_doctor'?'doc':'user',text:m.text,time:new Date(m.createdAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}));
-    setState({user:me.user, progress, notifications:notifications.notifications||[], chat:chat.length?chat:S.chat});
+    const assignedDoctorId = dashboard?.consultations?.[0]?.doctorId;
+    const chat = (messages.messages||[]).map(m=>({from:m.fromUserId===assignedDoctorId?'doc':'user',text:m.text,time:new Date(m.createdAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}));
+    setState({user:me.user, dashboard, progress, notifications:notifications.notifications||dashboard?.notifications||[], chat:chat.length?chat:[]});
   }catch(err){ AUTH.clear(); }
 }
 
@@ -553,10 +585,10 @@ function Auth(){
         <button class="togb ${isL?'on':''}"  onclick="go('login')">Log In</button>
       </div>
       ${S.error?`<div class="note nr" style="margin-bottom:14px"><i class="ti ti-alert-circle" style="color:var(--err)"></i><p style="font-size:12px;color:#7F1D1D;margin:0">${safeText(S.error)}</p></div>`:''}
-      ${!isL?`<div class="g2"><div class="fi"><label class="fl">First Name</label><input class="inp" id="first-name" type="text" placeholder="Amara"></div><div class="fi"><label class="fl">Last Name</label><input class="inp" id="last-name" type="text" placeholder="Okafor"></div></div>`:''}
-      <div class="fi"><label class="fl">Email Address</label><div class="iw"><i class="ti ti-mail ii"></i><input class="inp" id="auth-email" type="email" value="${isL?'patient@wellbodyvital.com':''}" placeholder="you@email.com"></div></div>
-      ${!isL?`<div class="fi"><label class="fl">Phone Number</label><div class="iw"><i class="ti ti-phone ii"></i><input class="inp" id="auth-phone" type="tel" placeholder="+234 800 000 0000"></div></div>`:''}
-      <div class="fi"><label class="fl">Password</label><div class="iw"><i class="ti ti-lock ii"></i><input class="inp" id="auth-password" type="password" value="${isL?'password123':''}" placeholder="Min. 8 characters"></div></div>
+      ${!isL?`<div class="g2"><div class="fi"><label class="fl">First Name</label><input class="inp" id="first-name" type="text" placeholder="First name"></div><div class="fi"><label class="fl">Last Name</label><input class="inp" id="last-name" type="text" placeholder="Last name"></div></div>`:''}
+      <div class="fi"><label class="fl">Email Address</label><div class="iw"><i class="ti ti-mail ii"></i><input class="inp" id="auth-email" type="email" placeholder="you@email.com"></div></div>
+      ${!isL?phoneFields('auth'):''}
+      <div class="fi"><label class="fl">Password</label><div class="iw"><i class="ti ti-lock ii"></i><input class="inp" id="auth-password" type="password" placeholder="Min. 8 characters"></div></div>
       ${!isL?`<div class="note nt" style="margin-bottom:14px"><label style="display:flex;gap:9px;align-items:flex-start;cursor:pointer;width:100%"><input type="checkbox" id="auth-consent" checked style="margin-top:3px;flex-shrink:0"><span style="font-size:12px;color:var(--navy);line-height:1.6">I agree to WellBodyVital's <strong>Terms of Service</strong> and <strong>Privacy Policy</strong>, and consent to my medical data being handled per NDPR guidelines.</span></label></div>`:''}
       <button class="btn bc" style="margin-bottom:14px" onclick="doAuth()"><i class="ti ti-${S.loading?'loader-2':isL?'login':'heart-plus'}"></i> ${S.loading?'Please wait...':isL?'Log In':'Start My Wellness Journey'}</button>
       <div class="dor">or continue with</div>
@@ -582,12 +614,13 @@ async function doAuth(){
       AUTH.set(result); S.user=result.user;
     }else{
       const name = `${document.getElementById('first-name')?.value.trim()||''} ${document.getElementById('last-name')?.value.trim()||''}`.trim();
-      await api('/auth/register',{method:'POST',body:JSON.stringify({role:'patient',name,email,password,phone:document.getElementById('auth-phone')?.value.trim()})});
+      await api('/auth/register',{method:'POST',body:JSON.stringify({role:'patient',name,email,password,phone:composedPhone('auth'),country:document.getElementById('auth-country')?.value || 'Nigeria'})});
       const result = await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});
       AUTH.set(result); S.user=result.user;
     }
-    setState({loading:false,screen:'onboarding',step:0});
-    document.getElementById('bottom-nav').style.display='none';
+    setState({loading:false,screen:isLogin?'dashboard':'onboarding',step:0});
+    if(isLogin) await hydrateApp();
+    document.getElementById('bottom-nav').style.display=isLogin?'flex':'none';
   }catch(err){ toastError(err); }
 }
 
@@ -596,9 +629,9 @@ function Onboarding(){
   const steps=['Personal Details','Body &amp; Goals','Emergency Contact','Health Consent'];
   const s=S.step;
   const c=[
-    `<div class="g2"><div class="fi"><label class="fl">Date of Birth</label><input class="inp" type="date" value="1990-06-15"></div><div class="fi"><label class="fl">Gender</label><select class="inp"><option>Female</option><option>Male</option><option>Non-binary</option><option>Prefer not to say</option></select></div></div><div class="fi"><label class="fl">State of Residence</label><select class="inp"><option>Lagos</option><option>Abuja (FCT)</option><option>Kano</option><option>Rivers</option><option>Ogun</option><option>Delta</option><option>Anambra</option><option>Oyo</option><option>Enugu</option></select></div><div class="fi"><label class="fl">Delivery Address</label><textarea class="inp" rows="3" placeholder="Full delivery address for pharmacy orders..."></textarea></div>`,
+    `<div class="g2"><div class="fi"><label class="fl">Date of Birth</label><input class="inp" type="date" value="1990-06-15"></div><div class="fi"><label class="fl">Gender</label><select class="inp"><option>Female</option><option>Male</option><option>Non-binary</option><option>Prefer not to say</option></select></div></div><div class="fi"><label class="fl">Country</label><select class="inp">${countryOptions('Nigeria')}</select></div><div class="fi"><label class="fl">State of Residence</label><select class="inp"><option>Lagos</option><option>Abuja (FCT)</option><option>Kano</option><option>Rivers</option><option>Ogun</option><option>Delta</option><option>Anambra</option><option>Oyo</option><option>Enugu</option></select></div><div class="fi"><label class="fl">Delivery Address</label><textarea class="inp" rows="3" placeholder="Full delivery address for pharmacy orders..."></textarea></div>`,
     `<div class="g2"><div class="fi"><label class="fl">Height (cm)</label><input class="inp" type="number" value="165"></div><div class="fi"><label class="fl">Weight (kg)</label><input class="inp" type="number" value="98"></div></div><div class="cteal" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px"><span style="font-size:13px;font-weight:700;color:var(--navy)">Your BMI</span><span class="badge bwarn">36.0 — Obese II</span></div><div class="prog plg" style="margin-bottom:7px"><div class="pf" style="width:72%;background:var(--warn)"></div></div><p style="font-size:12px;color:var(--p);margin:0">BMI &#8805; 30 qualifies you for our medical wellness evaluation.</p></div><div class="fi"><label class="fl">Wellness Goal</label><select class="inp"><option>Lose weight &amp; improve metabolic health</option><option>Improve energy &amp; daily vitality</option><option>Manage blood sugar / diabetes risk</option><option>Build healthy long-term habits</option><option>All of the above</option></select></div><div class="fi"><label class="fl">Timeline</label><select class="inp"><option>3 months</option><option>6 months</option><option selected>12 months</option><option>Ongoing lifestyle change</option></select></div>`,
-    `<div class="note nt" style="margin-bottom:14px"><i class="ti ti-heart" style="color:var(--p);font-size:15px;flex-shrink:0;margin-top:1px"></i><p style="font-size:13px;color:var(--navy);margin:0">In a medical emergency, we will contact this person on your behalf immediately.</p></div><div class="fi"><label class="fl">Contact Full Name</label><input class="inp" type="text" value="Chidi Okafor"></div><div class="fi"><label class="fl">Relationship</label><select class="inp"><option>Spouse</option><option>Parent</option><option>Sibling</option><option>Friend</option></select></div><div class="fi"><label class="fl">Phone Number</label><input class="inp" type="tel" value="+234 800 987 6543"></div>`,
+    `<div class="note nt" style="margin-bottom:14px"><i class="ti ti-heart" style="color:var(--p);font-size:15px;flex-shrink:0;margin-top:1px"></i><p style="font-size:13px;color:var(--navy);margin:0">In a medical emergency, we will contact this person on your behalf immediately.</p></div><div class="fi"><label class="fl">Contact Full Name</label><input class="inp" type="text" placeholder="Full name"></div><div class="fi"><label class="fl">Relationship</label><select class="inp"><option>Spouse</option><option>Parent</option><option>Sibling</option><option>Friend</option></select></div>${phoneFields('emergency')}`,
     `${[['Medical Data Consent','I consent to WellBodyVital collecting and processing my medical data for healthcare delivery under NDPR guidelines.'],['Telehealth Consent','Consultations are conducted remotely via secure video/chat with MDCN-licensed physicians.'],['Privacy Policy','I agree to WellBodyVital\'s Privacy Policy and data handling practices.'],['Terms of Service','I agree to WellBodyVital\'s Terms including subscription, cancellation, and refund policies.'],['Rx Acknowledgement','Prescription decisions (including GLP-1) are made solely by licensed doctors and are not guaranteed.']].map(([t,d])=>`<div class="ropt"><input type="checkbox" checked><div><div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:2px">${t}</div><div style="font-size:12px;color:var(--nm);line-height:1.55">${d}</div></div></div>`).join('')}`
   ];
   return `<div>
@@ -619,12 +652,7 @@ function Onboarding(){
 
 /* ==========================================================  SCREEN — PLANS  */
 function Plans(){
-  const fallback=[
-    {id:'starter',nm:'Starter',tag:'Begin your wellness journey',price:'15,000',badge:null,c:'var(--pd)',cl:'var(--ppale)',feats:['Personalised meal plan','Custom fitness programme','Weekly coaching session','Supplement guidance','Metabolic progress tracking']},
-    {id:'pro',nm:'Pro',tag:'Guided by a real physician',price:'35,000',badge:'Most Popular',bc:'var(--p)',c:'var(--p)',cl:'var(--ppale)',feats:['Everything in Starter','Licensed doctor consultation','Medical eligibility screening','Prescription access if approved','Priority support','Lab result guidance']},
-    {id:'premium',nm:'Premium',tag:'The complete metabolic health experience',price:'65,000',badge:'GLP-1 Access',bc:'var(--coral)',c:'var(--cd)',cl:'var(--cl)',feats:['Everything in Pro','GLP-1 medication access','NAFDAC pharmacy delivery','Monthly physician follow-up','Concierge support 24/7','Refill &amp; side effect management']},
-  ];
-  const P=(S.plans||fallback).map(plan=>({
+  const P=(S.plans||[]).map(plan=>({
     id:plan.slug||plan.id,nm:plan.name||plan.nm,tag:plan.tag || (plan.slug==='starter'?'Begin your wellness journey':plan.slug==='premium'?'The complete metabolic health experience':'Guided by a real physician'),
     price:Number(plan.price||String(plan.price).replace(/,/g,''))?.toLocaleString('en-NG')||plan.price,
     badge:plan.slug==='pro'?'Most Popular':plan.slug==='premium'?'GLP-1 Access':plan.badge,
@@ -638,7 +666,7 @@ function Plans(){
       <p style="color:rgba(255,255,255,.62);font-size:13px">All plans include secure data handling and licensed physician oversight.</p>
     </div>
     <div class="sb-plain">
-      ${P.map(p=>`<div class="plan ${S.plan===p.id?'sel':''} ${p.id==='premium'?'prem':''}" style="margin-bottom:14px" onclick="setState({plan:'${p.id}'})">
+      ${P.length?P.map(p=>`<div class="plan ${S.plan===p.id?'sel':''} ${p.id==='premium'?'prem':''}" style="margin-bottom:14px" onclick="setState({plan:'${p.id}'})">
         ${p.badge?`<div class="prib" style="background:${p.bc}">${p.badge}</div>`:''}
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:13px;padding-right:${p.badge?64:0}px">
           <div><div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:800;color:${p.c}">${p.nm}</div><div style="font-size:12px;color:var(--nl);margin-top:2px">${p.tag}</div></div>
@@ -647,42 +675,44 @@ function Plans(){
         <div class="div"></div>
         ${p.feats.map(f=>`<div class="fc"><i class="ti ti-check" style="color:${p.c}"></i><span style="font-size:13px;color:var(--nm)">${f}</span></div>`).join('')}
         ${S.plan===p.id?`<div style="margin-top:11px;background:${p.cl};border-radius:8px;padding:7px 12px;display:flex;align-items:center;gap:6px"><i class="ti ti-circle-check" style="color:${p.c}"></i><span style="font-size:12px;font-weight:700;color:${p.c}">Selected Plan</span></div>`:''}
-      </div>`).join('')}
+      </div>`).join(''):emptyState('ti-server-off','Plans are not loaded','Subscription plans will appear here once the backend API responds.')}
       <div class="note ny" style="margin-bottom:18px"><i class="ti ti-lock" style="color:var(--warn);font-size:15px;flex-shrink:0;margin-top:1px"></i><p style="font-size:11px;color:#78350F;margin:0">GLP-1 medications require a valid prescription from a licensed MDCN physician. Eligibility is determined by clinical assessment. Prescription not guaranteed.</p></div>
-      <button class="btn bc" style="margin-bottom:11px" onclick="go('payment')"><i class="ti ti-credit-card"></i> Subscribe to ${P.find(p=>p.id===S.plan)?.nm} Plan</button>
+      <button class="btn bc" style="margin-bottom:11px" onclick="${P.length?`go('payment')`:`loadPlans()`}"><i class="ti ti-credit-card"></i> ${P.length?`Subscribe to ${P.find(p=>p.id===S.plan)?.nm || P[0]?.nm} Plan`:'Retry Loading Plans'}</button>
       <button class="btn bo" style="height:42px;font-size:13px" onclick="go('questionnaire')">Complete wellness questionnaire first</button>
     </div>
   </div>`;
 }
 async function loadPlans(){
   if(S.plans) return;
-  try{ const result=await api('/plans'); setState({plans:result.plans}); }catch(err){ /* keep fallback plans */ }
+  try{ const result=await api('/plans'); setState({plans:result.plans}); }catch(err){ toastError(err); }
 }
 
 /* ==========================================================  SCREEN — PAYMENT  */
 function Payment(){
-  const NM={starter:'Starter',pro:'Pro',premium:'Premium'};
-  const PR={starter:'15,000',pro:'35,000',premium:'65,000'};
+  const selected = (S.plans||[]).find(p=>p.slug===S.plan || p.id===S.plan);
+  const planName = selected?.name || titleCase(S.plan || 'Plan');
+  const planPrice = selected?.price ? money(selected.price) : '--';
   const methods=[{id:'card',ic:'ti-credit-card',l:'Card Payment'},{id:'bank',ic:'ti-building-bank',l:'Bank Transfer'},{id:'paystack',ic:'ti-brand-stripe',l:'Paystack'},{id:'flutter',ic:'ti-bolt',l:'Flutterwave'},{id:'wallet',ic:'ti-wallet',l:'Wallet'}];
   const m=S.payMethod;
   return `<div>${TopBar('Secure Payment','plans')}
   <div class="sb-plain">
-    <div class="cteal" style="margin-bottom:18px"><div style="display:flex;justify-content:space-between;align-items:center"><div><p class="ey" style="margin-bottom:4px">Subscribing to</p><div style="font-family:'Playfair Display',serif;font-size:21px;font-weight:800;color:var(--navy)">${NM[S.plan]} Plan</div><div style="font-size:12px;color:var(--p)">Monthly &middot; Cancel anytime</div></div><div style="text-align:right"><div style="font-size:26px;font-weight:800;color:var(--navy)">&#8358;${PR[S.plan]}</div><div class="cap">/month</div></div></div></div>
+    <div class="cteal" style="margin-bottom:18px"><div style="display:flex;justify-content:space-between;align-items:center"><div><p class="ey" style="margin-bottom:4px">Subscribing to</p><div style="font-family:'Playfair Display',serif;font-size:21px;font-weight:800;color:var(--navy)">${safeText(planName)}</div><div style="font-size:12px;color:var(--p)">Monthly &middot; Cancel anytime</div></div><div style="text-align:right"><div style="font-size:26px;font-weight:800;color:var(--navy)">&#8358;${planPrice}</div><div class="cap">/month</div></div></div></div>
     <h3 style="margin-bottom:11px">Payment Method</h3>
     <div class="g2" style="margin-bottom:18px">
       ${methods.map(md=>`<div class="ptile ${m===md.id?'on':''}" onclick="setState({payMethod:'${md.id}'})"><i class="ti ${md.ic}" style="font-size:19px;color:${m===md.id?'var(--p)':'var(--nl)'}"></i><span style="font-size:12px;font-weight:600;color:${m===md.id?'var(--p)':'var(--nm)'}">${md.l}</span></div>`).join('')}
     </div>
-    ${m==='card'?`<div class="fi"><label class="fl">Card Number</label><div class="iw"><i class="ti ti-credit-card ii"></i><input class="inp" placeholder="0000  0000  0000  0000"></div></div><div class="g2"><div class="fi"><label class="fl">Expiry</label><input class="inp" placeholder="MM / YY"></div><div class="fi"><label class="fl">CVV</label><input class="inp" type="password" placeholder="&bull;&bull;&bull;"></div></div><div class="fi"><label class="fl">Cardholder Name</label><input class="inp" placeholder="Name as on card"></div>`:m==='bank'?`<div class="card" style="margin-bottom:14px"><p class="ey" style="margin-bottom:11px">Bank Transfer Details</p>${[['Bank','Guaranty Trust Bank (GTB)'],['Account No.','0123456789'],['Account Name','WellBodyVital Health Ltd'],['Reference','WBV-2026-48291']].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bga)"><span style="font-size:12px;color:var(--nl)">${k}</span><span style="font-size:13px;font-weight:700;color:var(--navy)">${v}</span></div>`).join('')}<p style="font-size:11px;color:var(--nl);margin-top:9px">Include the reference in your transfer narration. Confirmed within 30 minutes.</p></div>`:m==='paystack'?`<div class="card" style="text-align:center;padding:26px;margin-bottom:14px"><i class="ti ti-brand-stripe" style="font-size:48px;color:#00c3f7;margin-bottom:11px;display:block"></i><h3 style="margin-bottom:7px">Pay with Paystack</h3><p style="font-size:13px">Redirecting to Paystack's secure, PCI-DSS compliant payment page.</p></div>`:m==='flutter'?`<div class="card" style="text-align:center;padding:26px;margin-bottom:14px"><i class="ti ti-bolt" style="font-size:48px;color:#f5a623;margin-bottom:11px;display:block"></i><h3 style="margin-bottom:7px">Pay with Flutterwave</h3><p style="font-size:13px">Redirecting to Flutterwave's secure checkout.</p></div>`:`<div class="cteal" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center"><div><p class="ey" style="margin-bottom:4px">Wallet Balance</p><div style="font-size:24px;font-weight:800;color:var(--navy)">&#8358;42,500.00</div></div><button class="btn bp bsm" style="width:auto;padding:0 14px">Top Up</button></div></div>`}
+    ${m==='card'?`<div class="note nt" style="margin-bottom:14px"><i class="ti ti-lock" style="color:var(--p);font-size:15px;flex-shrink:0;margin-top:1px"></i><p style="font-size:12px;color:var(--navy);margin:0">Card collection will be handled by the server-side payment gateway checkout. No card API keys are exposed in the browser.</p></div>`:m==='bank'?`<div class="card" style="margin-bottom:14px"><p class="ey" style="margin-bottom:11px">Bank Transfer</p><p class="cap" style="line-height:1.7">A unique transfer reference will be generated by the backend payment middleware when you continue.</p></div>`:m==='paystack'?`<div class="card" style="text-align:center;padding:26px;margin-bottom:14px"><i class="ti ti-brand-stripe" style="font-size:48px;color:#00c3f7;margin-bottom:11px;display:block"></i><h3 style="margin-bottom:7px">Pay with Paystack</h3><p style="font-size:13px">The backend creates the checkout reference securely.</p></div>`:m==='flutter'?`<div class="card" style="text-align:center;padding:26px;margin-bottom:14px"><i class="ti ti-bolt" style="font-size:48px;color:#f5a623;margin-bottom:11px;display:block"></i><h3 style="margin-bottom:7px">Pay with Flutterwave</h3><p style="font-size:13px">The backend creates the checkout reference securely.</p></div>`:`<div class="cteal" style="margin-bottom:14px"><p class="ey" style="margin-bottom:4px">Wallet</p><div style="font-size:16px;font-weight:800;color:var(--navy)">Wallet payments will sync from the payments API.</div></div>`}
     <div style="display:flex;gap:8px;margin-bottom:18px"><input class="inp" placeholder="Promo / referral code" style="flex:1"><button class="btn bgh bsm" style="width:auto;padding:0 14px;flex-shrink:0">Apply</button></div>
-    <div class="card" style="margin-bottom:18px"><p class="ey" style="margin-bottom:11px">Order Summary</p>${[[`${NM[S.plan]} Plan`,`&#8358;${PR[S.plan]}`],['Platform Fee','&#8358;0'],['Discount','&#8358;0']].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:6px 0"><span style="font-size:13px;color:var(--nl)">${k}</span><span style="font-size:13px;font-weight:600">${v}</span></div>`).join('')}<div class="div"></div><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;font-weight:700;color:var(--navy)">Total Due</span><span style="font-size:22px;font-weight:800;color:var(--p)">&#8358;${PR[S.plan]}</span></div></div>
-    <button class="btn bc" style="margin-bottom:11px" onclick="cPay()"><i class="ti ti-lock"></i> Pay Securely &mdash; &#8358;${PR[S.plan]}</button>
+    <div class="card" style="margin-bottom:18px"><p class="ey" style="margin-bottom:11px">Order Summary</p>${[[`${planName}`,`&#8358;${planPrice}`],['Platform Fee','&#8358;0'],['Discount','&#8358;0']].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:6px 0"><span style="font-size:13px;color:var(--nl)">${safeText(k)}</span><span style="font-size:13px;font-weight:600">${v}</span></div>`).join('')}<div class="div"></div><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;font-weight:700;color:var(--navy)">Total Due</span><span style="font-size:22px;font-weight:800;color:var(--p)">&#8358;${planPrice}</span></div></div>
+    <button class="btn bc" style="margin-bottom:11px" onclick="cPay()"><i class="ti ti-lock"></i> Pay Securely &mdash; &#8358;${planPrice}</button>
     <div style="display:flex;align-items:center;justify-content:center;gap:6px"><i class="ti ti-shield-check" style="color:var(--p);font-size:13px"></i><span class="cap">256-bit SSL &middot; PCI DSS &middot; NDPR-compliant</span></div>
   </div></div>`;
 }
 async function cPay(){
   if(!requireAuth('payment')) return;
   const plan = (S.plans||[]).find(p=>p.slug===S.plan || p.id===S.plan);
-  const price = plan?.price || ({starter:15000,pro:35000,premium:65000}[S.plan]);
+  if(!plan) return toastError(new Error('Plans are still loading. Please retry in a moment.'));
+  const price = plan.price;
   setState({loading:true,error:null});
   try{
     const sub = await api('/subscription',{method:'POST',body:JSON.stringify({plan:S.plan})});
@@ -740,12 +770,18 @@ async function finishQ(){
 
 /* ==========================================================  SCREEN — DASHBOARD  */
 function Dashboard(){
-  const name = S.user?.name || 'Amara Okafor';
-  const initials = name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase() || 'AO';
-  const weights = S.progress?.weights || [];
-  const currentWeight = weights.at(-1)?.kg || 94.5;
-  const startWeight = weights[0]?.kg || 98;
-  const lost = Math.max(0, +(startWeight-currentWeight).toFixed(1));
+  const name = S.user?.name || 'WellBodyVital Member';
+  const initials = name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase() || 'WV';
+  const sub = currentSubscription();
+  const plan = currentPlan();
+  const doctor = patientDoctor();
+  const weights = S.progress?.weights || S.dashboard?.progressLogs?.map(l=>({date:l.loggedAt?.slice(0,10),kg:l.weightKg})) || [];
+  const bmi = S.progress?.bmi || S.dashboard?.progressLogs?.filter(l=>l.bmi).map(l=>({date:l.loggedAt?.slice(0,10),value:l.bmi})) || [];
+  const currentWeight = weights.at(-1)?.kg;
+  const startWeight = weights[0]?.kg;
+  const lost = currentWeight && startWeight ? Math.max(0, +(startWeight-currentWeight).toFixed(1)) : 0;
+  const activeRx = S.dashboard?.prescriptions?.[0];
+  const activeOrder = S.dashboard?.orders?.[0];
   return `<div>
     <div style="background:var(--bgc);padding:16px 19px;border-bottom:1px solid var(--gray)">
       <div style="display:flex;justify-content:space-between;align-items:center">
@@ -759,30 +795,28 @@ function Dashboard(){
     <div style="margin:14px;background:linear-gradient(135deg,var(--pdk),var(--p));border-radius:var(--rxl);padding:17px;color:#fff;position:relative;overflow:hidden">
       <div style="position:absolute;top:-40px;right:-40px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.05)"></div>
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div><div style="font-size:9px;color:rgba(255,255,255,.55);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px">Active Plan</div><div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:800">Pro Wellness Plan</div><div style="font-size:10px;color:rgba(255,255,255,.6);margin-top:1px">Renews 15 July 2026</div></div>
-        <span class="badge" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.22)"><i class="ti ti-check" style="font-size:9px"></i> Active</span>
+        <div><div style="font-size:9px;color:rgba(255,255,255,.55);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px">${sub?'Active Plan':'Subscription'}</div><div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:800">${safeText(plan?.name || 'No active plan')}</div><div style="font-size:10px;color:rgba(255,255,255,.6);margin-top:1px">${sub ? `Renews ${fmtDate(sub.currentPeriodEnd || sub.nextBillingAt)}` : 'Choose a plan to start testing payments and care workflows'}</div></div>
+        <span class="badge" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.22)"><i class="ti ti-${sub?'check':'clock'}" style="font-size:9px"></i> ${sub?titleCase(sub.status):'Inactive'}</span>
       </div>
       <div style="display:flex;margin-top:13px;border-top:1px solid rgba(255,255,255,.12);padding-top:11px">
-        ${[['Doctor','Assigned'],['Rx Status','Pending'],['Next Consult','20 Jul']].map(([k,v])=>`<div style="flex:1"><div style="font-size:9px;color:rgba(255,255,255,.5)">${k}</div><div style="font-size:12px;font-weight:700">${v}</div></div>`).join('')}
+        ${[['Doctor',doctor?'Assigned':'Awaiting'],['Rx Status',activeRx?titleCase(activeRx.status):'No Rx'],['Order',activeOrder?titleCase(activeOrder.status):'No order']].map(([k,v])=>`<div style="flex:1"><div style="font-size:9px;color:rgba(255,255,255,.5)">${k}</div><div style="font-size:12px;font-weight:700">${v}</div></div>`).join('')}
       </div>
     </div>
     <div style="padding:0 14px">
       <div class="g2" style="margin-bottom:14px">
-        <div class="stat"><div class="sl">Current Weight</div><div class="sv">${currentWeight} <span style="font-size:13px;color:var(--nl)">kg</span></div><div class="sc dn">&#8722;${lost} kg this month</div></div>
-        <div class="stat"><div class="sl">Goal Weight</div><div class="sv">73 <span style="font-size:13px;color:var(--nl)">kg</span></div><div class="sc" style="color:var(--nl)">21.5 kg away</div></div>
-        <div class="stat"><div class="sl">BMI</div><div class="sv">34.7</div><span class="badge bwarn" style="margin-top:5px">Obese I</span></div>
-        <div class="stat"><div class="sl">Days on Plan</div><div class="sv">23</div><div class="sc up">Streak! &#128293;</div></div>
+        <div class="stat"><div class="sl">Current Weight</div><div class="sv">${currentWeight ?? '--'} <span style="font-size:13px;color:var(--nl)">kg</span></div><div class="sc ${lost?'dn':''}">${weights.length?`&#8722;${lost} kg total`:'No logs yet'}</div></div>
+        <div class="stat"><div class="sl">Plan Price</div><div class="sv">${plan?`&#8358;${money(plan.price)}`:'--'}</div><div class="sc" style="color:var(--nl)">Monthly subscription</div></div>
+        <div class="stat"><div class="sl">BMI</div><div class="sv">${bmi.at(-1)?.value ?? '--'}</div><span class="badge ${bmi.length?'bwarn':'bgray'}" style="margin-top:5px">${bmi.length?'Tracked':'Not logged'}</span></div>
+        <div class="stat"><div class="sl">Messages</div><div class="sv">${S.chat.length}</div><div class="sc up">Secure chat</div></div>
       </div>
       <div class="card" style="margin-bottom:14px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3>Metabolic Progress</h3><span class="badge bok">&#8722;${lost} kg total</span></div>
-        <div style="display:flex;align-items:flex-end;gap:5px;height:72px">
-          ${[98,97.2,96.8,96,95.5,94.5].map((w,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:100%;background:${i===5?'var(--p)':'var(--pl)'};border-radius:3px 3px 0 0;height:${Math.round((w-93)/(98-93)*58+7)}px"></div><div style="font-size:9px;color:var(--nl)">W${i+1}</div></div>`).join('')}
-        </div>
+        ${weights.length?`<div style="display:flex;align-items:flex-end;gap:5px;height:72px">${weights.slice(-6).map((item,i,arr)=>{const vals=arr.map(w=>w.kg);const min=Math.min(...vals)-1,max=Math.max(...vals)+1;return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:100%;background:${i===arr.length-1?'var(--p)':'var(--pl)'};border-radius:3px 3px 0 0;height:${Math.round(((item.kg-min)/(max-min))*52+10)}px"></div><div style="font-size:9px;color:var(--nl)">${fmtShortDate(item.date)}</div></div>`}).join('')}</div>`:emptyInline('ti-scale','No progress data yet','Log weight from the progress screen after signup to see real trend data here.')}
       </div>
       <div class="card" style="margin-bottom:14px;cursor:pointer" onclick="go('doctor')">
         <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
           <div style="width:48px;height:48px;border-radius:50%;background:var(--il);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-user-heart" style="color:var(--inf);font-size:24px"></i></div>
-          <div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--navy)">Dr. Kemi Adeyemi</div><div class="cap">MBBS, Internal Medicine &middot; Lagos</div><div style="display:flex;gap:5px;margin-top:4px"><span class="badge bok" style="font-size:9px">&#9679; Online</span><span class="badge binf" style="font-size:9px">MDCN Verified</span></div></div>
+          <div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--navy)">${safeText(doctor?.name || 'Doctor assignment pending')}</div><div class="cap">${safeText(doctor?.specialty || 'Operations will assign a licensed physician after intake review')}</div><div style="display:flex;gap:5px;margin-top:4px"><span class="badge ${doctor?'binf':'bgray'}" style="font-size:9px">${doctor?'MDCN Verified':'Awaiting assignment'}</span></div></div>
           <i class="ti ti-chevron-right" style="color:var(--gm);font-size:16px"></i>
         </div>
         <div style="display:flex;gap:8px"><button class="btn bp bsm" style="flex:1" onclick="go('doctor')"><i class="ti ti-message"></i> Secure Chat</button><button class="btn bgh bsm" style="flex:1"><i class="ti ti-calendar"></i> Book Consult</button></div>
@@ -793,14 +827,14 @@ function Dashboard(){
       </div>
       <h3 style="margin-bottom:11px">Today's Wellness Habits</h3>
       <div class="card" style="margin-bottom:14px">
-        ${[[true,'Log morning weight'],[true,'Take morning supplement'],[false,'30 min walk — 5 PM'],[false,'Log dinner'],[false,'Drink 2L water']].map(([done,t])=>`<div style="display:flex;gap:9px;align-items:center;padding:10px 0;border-bottom:1px solid var(--bga)"><i class="ti ti-${done?'circle-check':'circle'}" style="color:${done?'var(--ok)':'var(--gm)'};font-size:18px;flex-shrink:0"></i><span style="font-size:13px;color:${done?'var(--nl)':'var(--navy)'};text-decoration:${done?'line-through':'none'}">${t}</span></div>`).join('')}
+        ${[['Log weight','Record today in Progress'],['Complete questionnaire','Submit intake for doctor review'],['Check notifications','Review clinical and order updates']].map(([t,s])=>`<div style="display:flex;gap:9px;align-items:center;padding:10px 0;border-bottom:1px solid var(--bga)"><i class="ti ti-circle" style="color:var(--gm);font-size:18px;flex-shrink:0"></i><span style="font-size:13px;color:var(--navy)">${t}<span class="cap" style="display:block">${s}</span></span></div>`).join('')}
       </div>
       <!-- Upgrade banner — last content item, sb padding clears nav -->
       <div style="background:linear-gradient(135deg,var(--navy),#1e3a5f);border-radius:var(--rxl);padding:18px">
         <div style="font-size:9px;color:rgba(255,255,255,.5);font-weight:700;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:5px">Upgrade to Premium</div>
         <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700;margin-bottom:4px;color:#fff">Unlock GLP-1 &amp; Concierge Care</div>
         <div style="font-size:12px;color:rgba(255,255,255,.65);margin-bottom:14px">Access GLP-1 prescriptions via NAFDAC-registered pharmacies with full physician oversight.</div>
-        <button class="btn bc bsm" style="width:auto;padding:0 18px">Upgrade Now &#8594;</button>
+        <button class="btn bc bsm" style="width:auto;padding:0 18px" onclick="go('plans')">Upgrade Now &#8594;</button>
       </div>
     </div>
     <!-- .sb padding-bottom ensures upgrade card clears the bottom nav -->
@@ -810,86 +844,118 @@ function Dashboard(){
 
 /* ==========================================================  SCREEN — PROGRESS  */
 function Progress(){
+  const weights = S.progress?.weights || [];
+  const bmi = S.progress?.bmi || [];
+  const current = weights.at(-1);
+  const start = weights[0];
+  const lost = current&&start ? +(start.kg-current.kg).toFixed(1) : 0;
+  const goal = 73;
+  const totalTarget = start ? Math.max(1, start.kg-goal) : 1;
+  const pct = start&&current ? Math.max(0, Math.min(100, Math.round((lost/totalTarget)*100))) : 0;
+  const chart = weights.slice(-7);
+  const vals = chart.map(w=>w.kg);
+  const min = vals.length ? Math.min(...vals)-1 : 0;
+  const max = vals.length ? Math.max(...vals)+1 : 1;
+  const points = chart.map((w,i)=>[chart.length===1?160:Math.round(i*(320/(chart.length-1))), Math.round(78-((w.kg-min)/(max-min))*62)]);
+  const path = points.map(([x,y],i)=>`${i?'L':'M'}${x},${y}`).join(' ');
+  const area = points.length ? `${path} L320,88 L0,88 Z` : '';
   return `<div>
     <div style="padding:17px 19px;background:var(--bgc);border-bottom:1px solid var(--gray);position:sticky;top:0;z-index:40">
       <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="font-size:18px">Progress Tracker</h2><button class="btn bgh bsm" style="width:auto;padding:0 13px"><i class="ti ti-plus"></i> Log Weight</button></div>
     </div>
     <div class="sb">
-      <div class="g3" style="margin-bottom:18px">${[['Start','98 kg','1 Jun'],['Now','94.5 kg','Today'],['Goal','73 kg','Target']].map(([l,v,d])=>`<div class="stat" style="text-align:center;padding:12px 7px"><div class="sl">${l}</div><div style="font-size:14px;font-weight:800;color:var(--navy);margin:3px 0">${v}</div><div class="cap">${d}</div></div>`).join('')}</div>
-      <div class="cteal" style="margin-bottom:18px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px"><span style="font-size:13px;font-weight:700;color:var(--navy)">Journey Progress</span><span style="font-size:18px;font-weight:800;color:var(--p)">14%</span></div><div class="prog plg" style="margin-bottom:7px"><div class="pf" style="width:14%"></div></div><div style="display:flex;justify-content:space-between"><span class="cap">3.5 kg lost</span><span class="cap">21.5 kg to goal</span></div></div>
+      <div class="g3" style="margin-bottom:18px">${[['Start',start?`${start.kg} kg`:'--',start?fmtShortDate(start.date):'No log'],['Now',current?`${current.kg} kg`:'--',current?fmtShortDate(current.date):'No log'],['Goal',`${goal} kg`,'Target']].map(([l,v,d])=>`<div class="stat" style="text-align:center;padding:12px 7px"><div class="sl">${l}</div><div style="font-size:14px;font-weight:800;color:var(--navy);margin:3px 0">${v}</div><div class="cap">${d}</div></div>`).join('')}</div>
+      <div class="cteal" style="margin-bottom:18px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px"><span style="font-size:13px;font-weight:700;color:var(--navy)">Journey Progress</span><span style="font-size:18px;font-weight:800;color:var(--p)">${pct}%</span></div><div class="prog plg" style="margin-bottom:7px"><div class="pf" style="width:${pct}%"></div></div><div style="display:flex;justify-content:space-between"><span class="cap">${lost} kg lost</span><span class="cap">${current?Math.max(0, +(current.kg-goal).toFixed(1)):'--'} kg to goal</span></div></div>
       <div class="card" style="margin-bottom:18px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px"><h3>Weight History</h3><div style="display:flex;gap:3px">${['1W','1M','3M','All'].map((t,i)=>`<button style="border:none;padding:4px 9px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;background:${i===1?'var(--p)':'var(--bga)'};color:${i===1?'#fff':'var(--nl)'}">${t}</button>`).join('')}</div></div>
-        <div style="position:relative;height:88px;margin-bottom:8px">
+        ${points.length?`<div style="position:relative;height:88px;margin-bottom:8px">
           <svg width="100%" height="88" viewBox="0 0 320 88" preserveAspectRatio="none" style="overflow:visible">
             <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0F766E" stop-opacity=".16"/><stop offset="100%" stop-color="#0F766E" stop-opacity="0"/></linearGradient></defs>
-            <path d="M0,8 L53,16 L107,22 L160,32 L213,40 L267,54 L320,60 L320,88 L0,88 Z" fill="url(#cg)"/>
-            <path d="M0,8 L53,16 L107,22 L160,32 L213,40 L267,54 L320,60" fill="none" stroke="var(--p)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            ${[[0,8],[53,16],[107,22],[160,32],[213,40],[267,54],[320,60]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="4" fill="#fff" stroke="var(--p)" stroke-width="2"/>`).join('')}
+            <path d="${area}" fill="url(#cg)"/>
+            <path d="${path}" fill="none" stroke="var(--p)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            ${points.map(([x,y])=>`<circle cx="${x}" cy="${y}" r="4" fill="#fff" stroke="var(--p)" stroke-width="2"/>`).join('')}
           </svg>
         </div>
-        <div style="display:flex;justify-content:space-between">${['Jun 1','Jun 8','Jun 15','Jun 22','Jun 29','Jul 6','Today'].map(d=>`<span style="font-size:9px;color:var(--nl)">${d}</span>`).join('')}</div>
+        <div style="display:flex;justify-content:space-between">${chart.map(d=>`<span style="font-size:9px;color:var(--nl)">${fmtShortDate(d.date)}</span>`).join('')}</div>`:emptyInline('ti-chart-line','No weight history yet','Use Log Weight after your first measurement to create your chart.')}
       </div>
       <h3 style="margin-bottom:11px">BMI History</h3>
-      <div class="card" style="margin-bottom:18px">${[['1 Jun','36.0','Obese II','berr'],['15 Jun','35.2','Obese I','bwarn'],['1 Jul','34.7','Obese I','bwarn']].map(([d,b,c,t])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--bga)"><span class="cap">${d}</span><span style="font-size:15px;font-weight:800;color:var(--navy)">${b}</span><span class="badge ${t}" style="font-size:9px">${c}</span></div>`).join('')}</div>
+      <div class="card" style="margin-bottom:18px">${bmi.length?bmi.map(item=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--bga)"><span class="cap">${fmtShortDate(item.date)}</span><span style="font-size:15px;font-weight:800;color:var(--navy)">${item.value}</span><span class="badge bwarn" style="font-size:9px">Tracked</span></div>`).join(''):emptyInline('ti-report-medical','No BMI logs yet','BMI will appear when weight entries include height-derived BMI.')}</div>
       <h3 style="margin-bottom:11px">Milestones</h3>
-      <div class="tl">${[['var(--ok)','First 1 kg lost','8 June 2026','Done'],['var(--ok)','First 3.5 kg lost','6 July 2026','Done'],['var(--gm)','5% body weight lost','~25 Jul 2026','In Progress'],['var(--gm)','First 10 kg lost','~Sept 2026','Upcoming']].map(([c,t,d,s])=>`<div class="tli"><div class="tld" style="background:${c}">${s==='Done'?'&#10003;':s==='In Progress'?'&#9678;':'&#9675;'}</div><div style="flex:1;padding-top:2px"><div style="font-size:14px;font-weight:600;color:var(--navy)">${t}</div><div class="cap">${d}</div><span class="badge ${s==='Done'?'bok':s==='In Progress'?'bteal':'bgray'}" style="margin-top:5px;font-size:9px">${s}</span></div></div>`).join('')}</div>
+      <div class="tl">${[['var(--ok)','First 1 kg lost',lost>=1?'Done':'Upcoming'],['var(--ok)','First 5 kg lost',lost>=5?'Done':'Upcoming'],['var(--ok)','10% body weight lost',pct>=10?'Done':'Upcoming']].map(([c,t,s])=>`<div class="tli"><div class="tld" style="background:${s==='Done'?c:'var(--gm)'}">${s==='Done'?'&#10003;':'&#9675;'}</div><div style="flex:1;padding-top:2px"><div style="font-size:14px;font-weight:600;color:var(--navy)">${t}</div><div class="cap">${s==='Done'?'Reached from your logged progress':'Based on your live progress logs'}</div><span class="badge ${s==='Done'?'bok':'bgray'}" style="margin-top:5px;font-size:9px">${s}</span></div></div>`).join('')}</div>
     </div>
   </div>`;
 }
 
 /* ==========================================================  SCREEN — DOCTOR  */
 function Doctor(){
+  const doctor = patientDoctor();
+  const questionnaire = S.dashboard?.questionnaire;
+  const rx = S.dashboard?.prescriptions?.[0];
+  const order = S.dashboard?.orders?.[0];
   return `<div>
     <div style="background:var(--bgc);padding:17px 19px;border-bottom:1px solid var(--gray)">
       <div style="display:flex;gap:13px;align-items:center;margin-bottom:14px">
         <div style="width:54px;height:54px;border-radius:50%;background:var(--il);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-user-heart" style="color:var(--inf);font-size:26px"></i></div>
-        <div><div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:800;color:var(--navy)">Dr. Kemi Adeyemi</div><div class="cap">MBBS &middot; Internal Medicine &middot; 12 yrs exp.</div><div style="display:flex;gap:5px;margin-top:4px"><span class="badge bok" style="font-size:9px">&#9679; Online</span><span class="badge binf" style="font-size:9px">MDCN Verified</span></div></div>
+        <div><div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:800;color:var(--navy)">${safeText(doctor?.name || 'Doctor assignment pending')}</div><div class="cap">${safeText(doctor?.specialty || 'Complete intake and wait for operations assignment')}</div><div style="display:flex;gap:5px;margin-top:4px"><span class="badge ${doctor?'binf':'bgray'}" style="font-size:9px">${doctor?'MDCN Verified':'Not assigned'}</span></div></div>
       </div>
       <div class="g3" style="gap:7px"><button class="btn bp bsm" onclick="setState({modal:'book'})"><i class="ti ti-calendar"></i> Book</button><button class="btn bgh bsm"><i class="ti ti-upload"></i> Upload</button><button class="btn bo bsm"><i class="ti ti-video"></i> Video</button></div>
     </div>
     <div class="sb">
       <h3 style="margin-bottom:11px">Review Status</h3>
-      ${[['ti-clipboard-list','Intake Reviewed','Doctor reviewed your wellness questionnaire','bok','Done'],['ti-search','Eligibility Check','Metabolic screening in progress','bwarn','Active'],['ti-prescription','Prescription Decision','Awaiting physician decision','bgray','Pending'],['ti-pill','Pharmacy Order','Not yet initiated','bgray','Pending']].map(([ic,t,d,badge,s])=>`<div class="card" style="padding:12px;display:flex;gap:9px;align-items:center;margin-bottom:8px"><i class="ti ${ic}" style="font-size:19px;color:var(--p);flex-shrink:0"></i><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--navy)">${t}</div><div class="cap">${d}</div></div><span class="badge ${badge}" style="font-size:9px;flex-shrink:0">${s}</span></div>`).join('')}
-      <div class="cteal" style="margin:15px 0"><p class="ey" style="margin-bottom:7px">Doctor's Preliminary Note</p><p style="font-size:13px;color:var(--navy);line-height:1.7;font-style:italic">"Based on your assessment, you are an excellent candidate for our metabolic wellness programme. I will complete my full review within 24 hours."</p><div class="cap" style="margin-top:8px">— Dr. Kemi Adeyemi &middot; 6 July 2026</div></div>
+      ${[['ti-clipboard-list','Intake Submitted',questionnaire?'Your wellness questionnaire is on file':'Submit your wellness questionnaire for review',questionnaire?'bok':'bgray',questionnaire?'Done':'Pending'],['ti-user-heart','Doctor Assignment',doctor?'A licensed doctor has been assigned':'Operations team will assign a doctor',doctor?'bok':'bwarn',doctor?'Done':'Waiting'],['ti-prescription','Prescription Decision',rx?`Prescription status: ${titleCase(rx.status)}`:'Awaiting physician decision','bgray',rx?titleCase(rx.status):'Pending'],['ti-pill','Pharmacy Order',order?`Order status: ${titleCase(order.status)}`:'No order has been initiated','bgray',order?titleCase(order.status):'Pending']].map(([ic,t,d,badge,s])=>`<div class="card" style="padding:12px;display:flex;gap:9px;align-items:center;margin-bottom:8px"><i class="ti ${ic}" style="font-size:19px;color:var(--p);flex-shrink:0"></i><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--navy)">${t}</div><div class="cap">${safeText(d)}</div></div><span class="badge ${badge}" style="font-size:9px;flex-shrink:0">${safeText(s)}</span></div>`).join('')}
+      ${doctor?.note?`<div class="cteal" style="margin:15px 0"><p class="ey" style="margin-bottom:7px">Doctor's Note</p><p style="font-size:13px;color:var(--navy);line-height:1.7;font-style:italic">"${safeText(doctor.note)}"</p><div class="cap" style="margin-top:8px">— ${safeText(doctor.name)} &middot; ${fmtDate(doctor.next)}</div></div>`:''}
       <h3 style="margin-bottom:11px">Secure Consultation Chat</h3>
       <div class="card" style="padding:0;margin-bottom:14px;overflow:hidden">
         <div style="background:var(--bga);padding:9px 13px;border-bottom:1px solid var(--gray);display:flex;align-items:center;gap:6px"><i class="ti ti-lock" style="color:var(--p);font-size:12px"></i><span class="cap">End-to-end encrypted &middot; NDPR-compliant</span></div>
         <div id="chat-msgs" style="padding:13px;display:flex;flex-direction:column;gap:4px;max-height:210px;overflow-y:auto">
-          ${S.chat.map(msg=>`<div style="display:flex;flex-direction:column;${msg.from==='doc'?'align-items:flex-start':'align-items:flex-end'}"><div class="bub ${msg.from==='doc'?'bin':'bout'}">${msg.text}</div><span style="font-size:9px;color:var(--nl);margin:1px 4px">${msg.time}</span></div>`).join('')}
+          ${S.chat.length?S.chat.map(msg=>`<div style="display:flex;flex-direction:column;${msg.from==='doc'?'align-items:flex-start':'align-items:flex-end'}"><div class="bub ${msg.from==='doc'?'bin':'bout'}">${safeText(msg.text)}</div><span style="font-size:9px;color:var(--nl);margin:1px 4px">${safeText(msg.time)}</span></div>`).join(''):emptyInline('ti-message-circle','No messages yet','When you or your doctor sends a message, it will appear here.')}
         </div>
-        <div style="padding:9px 11px;border-top:1px solid var(--gray);display:flex;gap:7px"><input class="inp" id="chat-input" placeholder="Message Dr. Kemi securely..." style="flex:1;height:40px;font-size:13px"><button onclick="sendMsg()" style="background:var(--p);border:none;width:40px;height:40px;border-radius:var(--rsm);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-send" style="font-size:16px"></i></button></div>
+        <div style="padding:9px 11px;border-top:1px solid var(--gray);display:flex;gap:7px"><input class="inp" id="chat-input" placeholder="${doctor?'Message your doctor securely':'Doctor assignment required before chat'}" ${doctor?'':'disabled'} style="flex:1;height:40px;font-size:13px"><button onclick="sendMsg()" ${doctor?'':'disabled'} style="background:var(--p);border:none;width:40px;height:40px;border-radius:var(--rsm);color:#fff;cursor:${doctor?'pointer':'not-allowed'};display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:${doctor?1:.45}"><i class="ti ti-send" style="font-size:16px"></i></button></div>
       </div>
       <h3 style="margin-bottom:11px">Lab Results &amp; Documents</h3>
       <div class="card" style="margin-bottom:14px">
         <div class="upz" style="margin-bottom:11px"><i class="ti ti-cloud-upload" style="font-size:28px;color:var(--p);margin-bottom:7px;display:block"></i><div style="font-size:13px;font-weight:600;color:var(--nm)">Upload Lab Results</div><div class="cap">PDF, JPG, PNG &middot; Max 10 MB</div></div>
-        <div style="display:flex;gap:9px;align-items:center;padding:9px;background:var(--bga);border-radius:var(--rsm)"><i class="ti ti-file-type-pdf" style="color:var(--err);font-size:21px"></i><div style="flex:1"><div style="font-size:12px;font-weight:600;color:var(--navy)">Blood_Test_June2026.pdf</div><div class="cap">28 Jun &middot; 1.2 MB</div></div><span class="badge bok" style="font-size:9px">Reviewed</span></div>
+        <div style="display:flex;gap:9px;align-items:center;padding:9px;background:var(--bga);border-radius:var(--rsm)"><i class="ti ti-file-type-pdf" style="color:var(--nl);font-size:21px"></i><div style="flex:1"><div style="font-size:12px;font-weight:600;color:var(--navy)">No documents uploaded</div><div class="cap">Uploaded files will sync with the doctor review queue.</div></div><span class="badge bgray" style="font-size:9px">Empty</span></div>
       </div>
       <div class="cteal">
-        <div style="display:flex;gap:11px;align-items:center;margin-bottom:11px"><i class="ti ti-calendar-event" style="color:var(--p);font-size:28px"></i><div><div style="font-size:13px;font-weight:700;color:var(--navy)">Next Consultation</div><div style="font-family:'Playfair Display',serif;font-size:15px;font-weight:800;color:var(--p)">20 July 2026 &middot; 10:00 AM</div><div class="cap">Video call &middot; Dr. Kemi Adeyemi</div></div></div>
+        <div style="display:flex;gap:11px;align-items:center;margin-bottom:11px"><i class="ti ti-calendar-event" style="color:var(--p);font-size:28px"></i><div><div style="font-size:13px;font-weight:700;color:var(--navy)">Next Consultation</div><div style="font-family:'Playfair Display',serif;font-size:15px;font-weight:800;color:var(--p)">${doctor?.next?fmtDate(doctor.next):'Not scheduled'}</div><div class="cap">${doctor?`Video call &middot; ${safeText(doctor.name)}`:'Doctor assignment pending'}</div></div></div>
         <div style="display:flex;gap:7px"><button class="btn bp bsm" style="flex:1"><i class="ti ti-video"></i> Join Call</button><button class="btn bgh bsm" style="width:auto;padding:0 14px">Reschedule</button></div>
       </div>
     </div>
   </div>`;
 }
 async function sendMsg(){
+  const doctor = patientDoctor();
+  if(!doctor) return toastError(new Error('A doctor must be assigned before secure chat starts.'));
   const i=document.getElementById('chat-input');
   if(!i||!i.value.trim())return;
   const text=i.value.trim();
   i.value='';
   setState({chat:[...S.chat,{from:'user',text,time:'Now'}]});
-  try{ await api('/messages',{method:'POST',body:JSON.stringify({toUserId:'usr_doctor',text})}); }
+  try{ await api('/messages',{method:'POST',body:JSON.stringify({toUserId:doctor.id,text})}); }
   catch(err){ toastError(err); }
 }
 
 /* ==========================================================  SCREEN — PHARMACY  */
 function Pharmacy(){
+  const rx = S.dashboard?.prescriptions?.[0];
+  const order = S.dashboard?.orders?.[0];
+  const rxStatus = rx ? titleCase(rx.status) : 'No Prescription Yet';
+  const orderStatus = order ? titleCase(order.status) : 'No Order Yet';
+  const pipeline = [
+    ['Doctor Approval', rx ? 'Prescription record created by physician' : 'Awaiting doctor prescription decision', Boolean(rx)],
+    ['Prescription Issued', rx?.issuedAt ? `Issued ${fmtDate(rx.issuedAt)}` : 'Not issued yet', Boolean(rx?.issuedAt)],
+    ['Pharmacy Verification', order ? `Order status: ${orderStatus}` : 'No pharmacy order assigned', Boolean(order)],
+    ['Cold-chain Handling', order?.coldChainConfirmed ? 'Cold-chain confirmed by pharmacy' : 'Awaiting pharmacy confirmation', Boolean(order?.coldChainConfirmed)],
+    ['Delivery', order ? `Delivery status: ${orderStatus}` : 'Delivery starts after pharmacy acceptance', order?.status === 'delivered']
+  ];
   return `<div>
     <div style="padding:17px 19px;background:var(--bgc);border-bottom:1px solid var(--gray)"><h2 style="font-size:18px">Pharmacy</h2><p style="font-size:13px;margin-top:3px">NAFDAC-registered partner pharmacies &middot; Nationwide delivery</p></div>
     <div class="sb">
-      <div class="cteal" style="margin-bottom:18px"><p class="ey" style="margin-bottom:5px">Prescription Status</p><div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:800;color:var(--navy);margin-bottom:4px">Awaiting Doctor Approval</div><p style="font-size:12px;color:var(--p);margin-bottom:11px">Prescription issued only after Dr. Kemi formally approves your treatment plan.</p><div class="prog plg" style="margin-bottom:7px"><div class="pf" style="width:40%"></div></div><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--p)"><span>Intake &#10003;</span><span>MD Review</span><span>Rx Issued</span><span>Dispensed</span></div></div>
+      <div class="cteal" style="margin-bottom:18px"><p class="ey" style="margin-bottom:5px">Prescription Status</p><div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:800;color:var(--navy);margin-bottom:4px">${safeText(rxStatus)}</div><p style="font-size:12px;color:var(--p);margin-bottom:11px">${rx?`Medication: ${safeText(rx.medication || 'Clinical prescription')}`:'Prescription will appear only after physician approval.'}</p><div class="prog plg" style="margin-bottom:7px"><div class="pf" style="width:${rx?.issuedAt?75:rx?45:20}%"></div></div><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--p)"><span>Intake</span><span>MD Review</span><span>Rx Issued</span><span>Dispensed</span></div></div>
       <h3 style="margin-bottom:11px">Fulfilment Pipeline</h3>
-      <div class="tl" style="margin-bottom:18px">${[['var(--p)','Doctor Approval','Eligibility confirmed by your physician','Done'],['var(--warn)','Prescription Issued','Digital Rx sent to partner pharmacy','Pending'],['var(--gm)','Pharmacy Verification','Pharmacist verifies the Rx','Waiting'],['var(--gm)','Dispensing','Prepared &amp; quality-checked','Waiting'],['var(--gm)','Nationwide Delivery','Shipped to your registered address','Waiting']].map(([c,t,d,s])=>`<div class="tli"><div class="tld" style="background:${c}">${s==='Done'?'&#10003;':s==='Pending'?'&#9678;':'&#9675;'}</div><div style="flex:1;padding-top:2px"><div style="font-size:14px;font-weight:600;color:var(--navy)">${t}</div><div class="cap">${d}</div></div></div>`).join('')}</div>
-      <div class="card" style="margin-bottom:14px"><div style="display:flex;gap:9px;align-items:flex-start"><i class="ti ti-map-pin" style="color:var(--p);font-size:18px;flex-shrink:0;margin-top:1px"></i><div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--navy)">12 Adeola Odeku Street</div><div class="cap">Victoria Island, Lagos, 101241</div></div><button style="background:none;border:none;color:var(--p);font-size:12px;font-weight:700;cursor:pointer">Edit</button></div></div>
+      <div class="tl" style="margin-bottom:18px">${pipeline.map(([t,d,done],idx)=>`<div class="tli"><div class="tld" style="background:${done?'var(--p)':idx===0?'var(--warn)':'var(--gm)'}">${done?'&#10003;':idx===0?'&#9678;':'&#9675;'}</div><div style="flex:1;padding-top:2px"><div style="font-size:14px;font-weight:600;color:var(--navy)">${safeText(t)}</div><div class="cap">${safeText(d)}</div></div></div>`).join('')}</div>
+      <div class="card" style="margin-bottom:14px"><div style="display:flex;gap:9px;align-items:flex-start"><i class="ti ti-map-pin" style="color:var(--p);font-size:18px;flex-shrink:0;margin-top:1px"></i><div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--navy)">${safeText(order?.deliveryAddress || 'No delivery address on order')}</div><div class="cap">${order?'Synced from pharmacy order':'Address appears after an order is created'}</div></div><button style="background:none;border:none;color:var(--p);font-size:12px;font-weight:700;cursor:pointer">Edit</button></div></div>
       <div class="note nr" style="margin-bottom:18px"><i class="ti ti-alert-triangle" style="color:var(--err);font-size:15px;flex-shrink:0;margin-top:1px"></i><div><div style="font-size:13px;font-weight:700;color:var(--err);margin-bottom:3px">Report Side Effects</div><p style="font-size:12px;color:#7F1D1D;margin:0;line-height:1.6">Once your medication is dispensed, report any adverse effects immediately. Your doctor is notified instantly.</p><button class="btn bdr bxs" style="width:auto;padding:0 12px;margin-top:9px;opacity:.5;cursor:not-allowed">Report Issue</button></div></div>
       <div style="background:var(--bga);border-radius:var(--rmd);padding:13px;border:1px solid var(--gray)"><p class="cap" style="line-height:1.75">WellBodyVital partners exclusively with NAFDAC-registered pharmacies across Nigeria. All medications are authentic, legally sourced, and dispensed only with a valid prescription from a licensed MDCN physician.</p></div>
     </div>
@@ -898,22 +964,25 @@ function Pharmacy(){
 
 /* ==========================================================  SCREEN — PROFILE  */
 function Profile(){
-  const name = S.user?.name || 'Amara Okafor';
-  const email = S.user?.email || 'amara@email.com';
-  const phone = S.user?.phone || '+234 800 123 4567';
-  const initials = name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase() || 'AO';
+  const name = S.user?.name || 'WellBodyVital Member';
+  const email = S.user?.email || '';
+  const phone = S.user?.phone || 'Not provided';
+  const country = S.user?.country || 'Nigeria';
+  const plan = currentPlan();
+  const sub = currentSubscription();
+  const initials = name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase() || 'WV';
   return `<div>
     <div class="hg" style="padding:34px 19px 26px;text-align:center">
       <div style="width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.18);border:2.5px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-family:'Playfair Display',serif;font-size:24px;font-weight:800;color:#fff">${initials}</div>
       <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:800;color:#fff">${safeText(name)}</div>
-      <div style="font-size:12px;color:rgba(255,255,255,.58);margin-top:2px">${safeText(email)} &middot; Nigeria</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.58);margin-top:2px">${safeText(email || 'No email')} &middot; ${safeText(country)}</div>
       <div style="display:flex;gap:7px;justify-content:center;margin-top:10px">
-        <span class="badge" style="background:rgba(255,255,255,.14);color:rgba(255,255,255,.82);border:1px solid rgba(255,255,255,.18)">Pro Plan</span>
-        <span class="badge" style="background:rgba(255,255,255,.14);color:rgba(255,255,255,.82);border:1px solid rgba(255,255,255,.18)">Since Jun 2026</span>
+        <span class="badge" style="background:rgba(255,255,255,.14);color:rgba(255,255,255,.82);border:1px solid rgba(255,255,255,.18)">${safeText(plan?.name || 'No active plan')}</span>
+        <span class="badge" style="background:rgba(255,255,255,.14);color:rgba(255,255,255,.82);border:1px solid rgba(255,255,255,.18)">Since ${fmtDate(S.user?.createdAt)}</span>
       </div>
     </div>
     <div class="sb">
-      ${[{s:'Account',items:[['ti-user-edit','Edit Profile','Update personal information'],['ti-lock','Change Password','Last changed: never'],['ti-phone','Phone Number',phone],['ti-map-pin','Delivery Address','Victoria Island, Lagos']]},{s:'Health &amp; Medical',items:[['ti-clipboard-list','Wellness Questionnaire','View or update responses'],['ti-report-medical','Medical Records','Lab results and documents'],['ti-heart','Emergency Contact','Chidi Okafor &middot; Spouse']]},{s:'Subscription &amp; Billing',items:[['ti-credit-card','Active Subscription','Pro &middot; &#8358;35,000/month'],['ti-receipt','Payment History','Invoices and receipts'],['ti-wallet','Wallet Balance','&#8358;42,500 available'],['ti-arrow-up-circle','Upgrade Plan','Switch to Premium']]},{s:'Notifications &amp; Preferences',items:[['ti-bell','Notification Settings','Wellness alerts &amp; reminders'],['ti-mail','Email Preferences','Weekly updates, reports']]},{s:'Support &amp; Legal',items:[['ti-headset','Contact Support','Chat with our team'],['ti-help-circle','Help &amp; FAQs','Common questions'],['ti-shield','Privacy Policy','NDPR-compliant data handling'],['ti-file-text','Terms of Service','Platform usage terms'],['ti-certificate','Medical Disclaimer','Healthcare legal notices']]}].map(g=>`<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--nl);margin-bottom:8px">${g.s}</div><div class="card" style="padding:0;overflow:hidden;margin-bottom:14px">${g.items.map(([ic,t,s],i)=>`<div style="display:flex;gap:11px;align-items:center;padding:13px 15px;${i<g.items.length-1?'border-bottom:1px solid var(--bga)':''};cursor:pointer"><i class="ti ${ic}" style="color:var(--p);font-size:17px;flex-shrink:0"></i><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--navy)">${t}</div><div class="cap">${safeText(s)}</div></div><i class="ti ti-chevron-right" style="color:var(--gm);font-size:13px"></i></div>`).join('')}</div>`).join('')}
+      ${[{s:'Account',items:[['ti-user-edit','Edit Profile','Update personal information'],['ti-lock','Change Password','Last changed: never'],['ti-phone','Phone Number',phone],['ti-world','Country',country],['ti-map-pin','Delivery Address',S.dashboard?.orders?.[0]?.deliveryAddress || 'No delivery address on order']]},{s:'Health &amp; Medical',items:[['ti-clipboard-list','Wellness Questionnaire',S.dashboard?.questionnaire?'Submitted for doctor review':'Not submitted'],['ti-report-medical','Medical Records','Upload lab results and documents'],['ti-heart','Emergency Contact','Not provided']]},{s:'Subscription &amp; Billing',items:[['ti-credit-card','Active Subscription',plan?`${plan.name} &middot; &#8358;${money(plan.price)}/month`:'No active subscription'],['ti-receipt','Payment History','Invoices and receipts'],['ti-arrow-up-circle','Upgrade Plan',sub?'Switch or update your plan':'Choose a plan to subscribe']]},{s:'Notifications &amp; Preferences',items:[['ti-bell','Notification Settings','Wellness alerts &amp; reminders'],['ti-mail','Email Preferences','Weekly updates, reports']]},{s:'Support &amp; Legal',items:[['ti-headset','Contact Support','Chat with our team'],['ti-help-circle','Help &amp; FAQs','Common questions'],['ti-shield','Privacy Policy','NDPR-compliant data handling'],['ti-file-text','Terms of Service','Platform usage terms'],['ti-certificate','Medical Disclaimer','Healthcare legal notices']]}].map(g=>`<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--nl);margin-bottom:8px">${g.s}</div><div class="card" style="padding:0;overflow:hidden;margin-bottom:14px">${g.items.map(([ic,t,s],i)=>`<div style="display:flex;gap:11px;align-items:center;padding:13px 15px;${i<g.items.length-1?'border-bottom:1px solid var(--bga)':''};cursor:pointer"><i class="ti ${ic}" style="color:var(--p);font-size:17px;flex-shrink:0"></i><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--navy)">${t}</div><div class="cap">${safeText(s)}</div></div><i class="ti ti-chevron-right" style="color:var(--gm);font-size:13px"></i></div>`).join('')}</div>`).join('')}
       <button class="btn bdr" style="margin-bottom:0" onclick="logout()"><i class="ti ti-logout"></i> Sign Out</button>
     </div>
     <!-- Profile uses the shared dark site footer -->
@@ -927,9 +996,23 @@ async function logout(){
 
 /* ==========================================================  SCREEN — NOTIFICATIONS  */
 function Notifications(){
-  const fallback=[{ic:'ti-stethoscope',bg:'var(--il)',c:'var(--inf)',t:'Dr. Kemi sent you a message',d:'Tap to read the consultation note',time:'2 min ago',u:true},{ic:'ti-clipboard-check',bg:'var(--okl)',c:'var(--ok)',t:'Wellness intake reviewed',d:'Your questionnaire was submitted successfully',time:'1 hr ago',u:true},{ic:'ti-pill',bg:'#EDE9FE',c:'#5B21B6',t:'Prescription update',d:'GLP-1 eligibility screening is in progress',time:'3 hrs ago',u:false}];
-  const ns=(S.notifications?.length?S.notifications.map(n=>({ic:'ti-bell',bg:'var(--il)',c:'var(--inf)',t:n.title,d:n.body,time:new Date(n.createdAt).toLocaleString(),u:!n.read})):fallback);
-  return `<div>${TopBar('Notifications','dashboard')}<div style="padding:0 19px"><div style="height:8px"></div>${ns.map(n=>`<div style="display:flex;gap:11px;align-items:flex-start;padding:13px 0;border-bottom:1px solid var(--bga);cursor:pointer"><div style="width:40px;height:40px;border-radius:11px;background:${n.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${n.ic}" style="color:${n.c};font-size:19px"></i></div><div style="flex:1"><div style="font-size:13px;font-weight:${n.u?700:600};color:var(--navy);margin-bottom:1px">${n.t}</div><div class="cap">${n.d}</div><div style="font-size:9px;color:var(--nl);margin-top:3px">${n.time}</div></div>${n.u?`<div style="width:8px;height:8px;border-radius:50%;background:var(--coral);flex-shrink:0;margin-top:5px;border:1.5px solid var(--bgc)"></div>`:''}</div>`).join('')}<div style="height:24px"></div></div></div>`;
+  const ns=(S.notifications||[]).map(n=>({ic:'ti-bell',bg:'var(--il)',c:'var(--inf)',t:n.title,d:n.body,time:new Date(n.createdAt).toLocaleString(),u:!n.read}));
+  return `<div>${TopBar('Notifications','dashboard')}<div style="padding:0 19px"><div style="height:8px"></div>${ns.length?ns.map(n=>`<div style="display:flex;gap:11px;align-items:flex-start;padding:13px 0;border-bottom:1px solid var(--bga);cursor:pointer"><div style="width:40px;height:40px;border-radius:11px;background:${n.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${n.ic}" style="color:${n.c};font-size:19px"></i></div><div style="flex:1"><div style="font-size:13px;font-weight:${n.u?700:600};color:var(--navy);margin-bottom:1px">${safeText(n.t)}</div><div class="cap">${safeText(n.d)}</div><div style="font-size:9px;color:var(--nl);margin-top:3px">${safeText(n.time)}</div></div>${n.u?`<div style="width:8px;height:8px;border-radius:50%;background:var(--coral);flex-shrink:0;margin-top:5px;border:1.5px solid var(--bgc)"></div>`:''}</div>`).join(''):emptyState('ti-bell-off','No notifications yet','Clinical, subscription, payment, and pharmacy updates will appear here when the backend creates them.')}<div style="height:24px"></div></div></div>`;
+}
+
+/* ==========================================================  SCREEN — SERVER REQUIRED  */
+function FileWarning(){
+  return `<div>
+    <div class="hg" style="padding:40px 22px 30px">
+      <div style="margin-bottom:18px">${LogoOnDark(48)}</div>
+      <h2 style="color:#fff;font-size:19px;margin-bottom:4px">Open WellBodyVital Through The Server</h2>
+      <p style="color:rgba(255,255,255,.62);font-size:13px">The customer app uses secure same-origin API routes, so it cannot run correctly from a local file URL.</p>
+    </div>
+    <div style="padding:22px">
+      <div class="note nt" style="margin-bottom:14px"><i class="ti ti-shield-lock" style="color:var(--p);font-size:16px;flex-shrink:0;margin-top:1px"></i><p style="font-size:12px;color:var(--navy);line-height:1.65;margin:0">Use the Netlify deployment or start the local server with <strong>npm start</strong> and open <strong>http://localhost:3000</strong>. This keeps API calls, session refresh, and backend middleware on the server side.</p></div>
+      <button class="btn bp" onclick="location.href='https://wellbodyvital-platform.netlify.app'"><i class="ti ti-external-link"></i> Open Netlify App</button>
+    </div>
+  </div>`;
 }
 
 /* ==========================================================  MODAL  */
@@ -965,6 +1048,12 @@ const PAGE_TITLES = {
 
 function render(){
   const el=document.getElementById('screen'); if(!el) return;
+  if(S.fileWarning){
+    el.innerHTML=FileWarning();
+    document.title='Open Through Server | WellBodyVital';
+    document.getElementById('bottom-nav').style.display='none';
+    return;
+  }
   const views={landing:Landing,login:Auth,signup:Auth,onboarding:Onboarding,plans:Plans,payment:Payment,questionnaire:Questionnaire,dashboard:Dashboard,progress:Progress,doctor:Doctor,pharmacy:Pharmacy,profile:Profile,notifications:Notifications};
   el.innerHTML=(views[S.screen]||Landing)();
   if(PAGE_TITLES[S.screen]) document.title=PAGE_TITLES[S.screen];
@@ -975,6 +1064,10 @@ function render(){
 }
 
 document.addEventListener('DOMContentLoaded',async ()=>{
+  if(location.protocol==='file:'){
+    setState({fileWarning:true});
+    return;
+  }
   await hydrateApp();
   render();
   document.getElementById('bottom-nav').style.display=AUTH.access && WITH_NAV.includes(S.screen) ? 'flex' : 'none';
