@@ -352,17 +352,61 @@ input[type=checkbox],input[type=radio] { accent-color:var(--p); margin-top:2px; 
 ========================================================== */
 const S = {
   screen:'landing', plan:'pro', step:0, qStep:0, payMethod:'card', modal:null,
+  loading:false, error:null, user:null, subscription:null, plans:null, progress:null, notifications:null,
   chat:[
     {from:'doc', text:'Hello Amara! I reviewed your wellness intake. Your metabolic profile shows great potential. Welcome to WellBodyVital — we are glad you are here!', time:'10:32 AM'},
     {from:'doc', text:'Before we proceed, could you share your most recent blood pressure readings and fasting glucose if available?', time:'10:34 AM'}
   ]
 };
 const WITH_NAV = ['dashboard','progress','doctor','pharmacy','profile','notifications'];
+const API_BASE = '/api/v1';
+const AUTH = {
+  get access(){ return sessionStorage.getItem('wbv_access') || ''; },
+  get refresh(){ return sessionStorage.getItem('wbv_refresh') || ''; },
+  set(tokens){
+    if(tokens.accessToken || tokens.token) sessionStorage.setItem('wbv_access', tokens.accessToken || tokens.token);
+    if(tokens.refreshToken) sessionStorage.setItem('wbv_refresh', tokens.refreshToken);
+  },
+  clear(){ sessionStorage.removeItem('wbv_access'); sessionStorage.removeItem('wbv_refresh'); }
+};
 
 function setState(u){ Object.assign(S,u); render(); }
+function safeText(v){ return String(v ?? '').replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+function api(path, opts={}){
+  return fetch(`${API_BASE}${path}`, {
+    ...opts,
+    headers:{'Content-Type':'application/json', ...(AUTH.access?{Authorization:`Bearer ${AUTH.access}`}:{}) , ...(opts.headers||{})}
+  }).then(async res=>{
+    if(res.status===401 && AUTH.refresh && !opts._retried){
+      const refreshed = await fetch(`${API_BASE}/auth/refresh`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refreshToken:AUTH.refresh})});
+      if(refreshed.ok){ AUTH.set(await refreshed.json()); return api(path,{...opts,_retried:true}); }
+      AUTH.clear();
+    }
+    const text = await res.text();
+    const body = text ? JSON.parse(text) : {};
+    if(!res.ok) throw new Error(body.error || 'Request failed');
+    return body;
+  });
+}
+function toastError(err){ setState({error:err.message || String(err), loading:false}); setTimeout(()=>setState({error:null}),3200); }
+function requireAuth(next='dashboard'){ if(!AUTH.access){ go('login'); return false; } return true; }
+async function hydrateApp(){
+  if(!AUTH.access) return;
+  try{
+    const [me, progress, notifications, messages] = await Promise.all([
+      api('/auth/me'),
+      api('/progress').catch(()=>null),
+      api('/notifications').catch(()=>({notifications:[]})),
+      api('/messages').catch(()=>({messages:[]})),
+    ]);
+    const chat = (messages.messages||[]).map(m=>({from:m.fromUserId==='usr_doctor'?'doc':'user',text:m.text,time:new Date(m.createdAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}));
+    setState({user:me.user, progress, notifications:notifications.notifications||[], chat:chat.length?chat:S.chat});
+  }catch(err){ AUTH.clear(); }
+}
 
 /* BUG FIX: always reset modal on navigation */
 function go(s, extra={}){
+  if(WITH_NAV.includes(s) && !requireAuth(s)) return;
   setState({screen:s, modal:null, ...extra});
   const nav = document.getElementById('bottom-nav');
   nav.style.display = WITH_NAV.includes(s) ? 'flex' : 'none';
@@ -370,6 +414,8 @@ function go(s, extra={}){
   const m = {dashboard:'home',progress:'prog',doctor:'doc',pharmacy:'pharm',profile:'prof'};
   if(m[s]) document.getElementById('nt-'+m[s])?.classList.add('active');
   document.getElementById('screen')?.scrollTo(0,0);
+  if(s==='plans') loadPlans();
+  if(WITH_NAV.includes(s)) hydrateApp();
 }
 
 /* ==========================================================
@@ -506,12 +552,13 @@ function Auth(){
         <button class="togb ${!isL?'on':''}" onclick="go('signup')">Sign Up</button>
         <button class="togb ${isL?'on':''}"  onclick="go('login')">Log In</button>
       </div>
-      ${!isL?`<div class="g2"><div class="fi"><label class="fl">First Name</label><input class="inp" type="text" placeholder="Amara"></div><div class="fi"><label class="fl">Last Name</label><input class="inp" type="text" placeholder="Okafor"></div></div>`:''}
-      <div class="fi"><label class="fl">Email Address</label><div class="iw"><i class="ti ti-mail ii"></i><input class="inp" type="email" placeholder="you@email.com"></div></div>
-      ${!isL?`<div class="fi"><label class="fl">Phone Number</label><div class="iw"><i class="ti ti-phone ii"></i><input class="inp" type="tel" placeholder="+234 800 000 0000"></div></div>`:''}
-      <div class="fi"><label class="fl">Password</label><div class="iw"><i class="ti ti-lock ii"></i><input class="inp" type="password" placeholder="Min. 8 characters"></div></div>
-      ${!isL?`<div class="note nt" style="margin-bottom:14px"><label style="display:flex;gap:9px;align-items:flex-start;cursor:pointer;width:100%"><input type="checkbox" style="margin-top:3px;flex-shrink:0"><span style="font-size:12px;color:var(--navy);line-height:1.6">I agree to WellBodyVital's <strong>Terms of Service</strong> and <strong>Privacy Policy</strong>, and consent to my medical data being handled per NDPR guidelines.</span></label></div>`:''}
-      <button class="btn bc" style="margin-bottom:14px" onclick="doAuth()"><i class="ti ti-${isL?'login':'heart-plus'}"></i> ${isL?'Log In':'Start My Wellness Journey'}</button>
+      ${S.error?`<div class="note nr" style="margin-bottom:14px"><i class="ti ti-alert-circle" style="color:var(--err)"></i><p style="font-size:12px;color:#7F1D1D;margin:0">${safeText(S.error)}</p></div>`:''}
+      ${!isL?`<div class="g2"><div class="fi"><label class="fl">First Name</label><input class="inp" id="first-name" type="text" placeholder="Amara"></div><div class="fi"><label class="fl">Last Name</label><input class="inp" id="last-name" type="text" placeholder="Okafor"></div></div>`:''}
+      <div class="fi"><label class="fl">Email Address</label><div class="iw"><i class="ti ti-mail ii"></i><input class="inp" id="auth-email" type="email" value="${isL?'patient@wellbodyvital.com':''}" placeholder="you@email.com"></div></div>
+      ${!isL?`<div class="fi"><label class="fl">Phone Number</label><div class="iw"><i class="ti ti-phone ii"></i><input class="inp" id="auth-phone" type="tel" placeholder="+234 800 000 0000"></div></div>`:''}
+      <div class="fi"><label class="fl">Password</label><div class="iw"><i class="ti ti-lock ii"></i><input class="inp" id="auth-password" type="password" value="${isL?'password123':''}" placeholder="Min. 8 characters"></div></div>
+      ${!isL?`<div class="note nt" style="margin-bottom:14px"><label style="display:flex;gap:9px;align-items:flex-start;cursor:pointer;width:100%"><input type="checkbox" id="auth-consent" checked style="margin-top:3px;flex-shrink:0"><span style="font-size:12px;color:var(--navy);line-height:1.6">I agree to WellBodyVital's <strong>Terms of Service</strong> and <strong>Privacy Policy</strong>, and consent to my medical data being handled per NDPR guidelines.</span></label></div>`:''}
+      <button class="btn bc" style="margin-bottom:14px" onclick="doAuth()"><i class="ti ti-${S.loading?'loader-2':isL?'login':'heart-plus'}"></i> ${S.loading?'Please wait...':isL?'Log In':'Start My Wellness Journey'}</button>
       <div class="dor">or continue with</div>
       <button class="btn bo" style="margin-bottom:14px;gap:9px">
         <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
@@ -522,7 +569,27 @@ function Auth(){
     </div>
   </div>`;
 }
-function doAuth(){ setState({screen:'onboarding',step:0}); document.getElementById('bottom-nav').style.display='none'; }
+async function doAuth(){
+  const isLogin = S.screen==='login';
+  const email = document.getElementById('auth-email')?.value.trim();
+  const password = document.getElementById('auth-password')?.value;
+  if(!email || !password) return toastError(new Error('Enter your email and password.'));
+  if(!isLogin && !document.getElementById('auth-consent')?.checked) return toastError(new Error('Please accept the privacy and medical consent terms.'));
+  setState({loading:true,error:null});
+  try{
+    if(isLogin){
+      const result = await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});
+      AUTH.set(result); S.user=result.user;
+    }else{
+      const name = `${document.getElementById('first-name')?.value.trim()||''} ${document.getElementById('last-name')?.value.trim()||''}`.trim();
+      await api('/auth/register',{method:'POST',body:JSON.stringify({role:'patient',name,email,password,phone:document.getElementById('auth-phone')?.value.trim()})});
+      const result = await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});
+      AUTH.set(result); S.user=result.user;
+    }
+    setState({loading:false,screen:'onboarding',step:0});
+    document.getElementById('bottom-nav').style.display='none';
+  }catch(err){ toastError(err); }
+}
 
 /* ==========================================================  SCREEN — ONBOARDING  */
 function Onboarding(){
@@ -552,11 +619,18 @@ function Onboarding(){
 
 /* ==========================================================  SCREEN — PLANS  */
 function Plans(){
-  const P=[
+  const fallback=[
     {id:'starter',nm:'Starter',tag:'Begin your wellness journey',price:'15,000',badge:null,c:'var(--pd)',cl:'var(--ppale)',feats:['Personalised meal plan','Custom fitness programme','Weekly coaching session','Supplement guidance','Metabolic progress tracking']},
     {id:'pro',nm:'Pro',tag:'Guided by a real physician',price:'35,000',badge:'Most Popular',bc:'var(--p)',c:'var(--p)',cl:'var(--ppale)',feats:['Everything in Starter','Licensed doctor consultation','Medical eligibility screening','Prescription access if approved','Priority support','Lab result guidance']},
     {id:'premium',nm:'Premium',tag:'The complete metabolic health experience',price:'65,000',badge:'GLP-1 Access',bc:'var(--coral)',c:'var(--cd)',cl:'var(--cl)',feats:['Everything in Pro','GLP-1 medication access','NAFDAC pharmacy delivery','Monthly physician follow-up','Concierge support 24/7','Refill &amp; side effect management']},
   ];
+  const P=(S.plans||fallback).map(plan=>({
+    id:plan.slug||plan.id,nm:plan.name||plan.nm,tag:plan.tag || (plan.slug==='starter'?'Begin your wellness journey':plan.slug==='premium'?'The complete metabolic health experience':'Guided by a real physician'),
+    price:Number(plan.price||String(plan.price).replace(/,/g,''))?.toLocaleString('en-NG')||plan.price,
+    badge:plan.slug==='pro'?'Most Popular':plan.slug==='premium'?'GLP-1 Access':plan.badge,
+    bc:plan.slug==='premium'?'var(--coral)':'var(--p)', c:plan.slug==='premium'?'var(--cd)':'var(--p)', cl:plan.slug==='premium'?'var(--cl)':'var(--ppale)',
+    feats:plan.features||plan.feats||[]
+  }));
   return `<div>
     <div class="hg" style="padding:30px 22px 22px">
       <div style="margin-bottom:16px">${LogoOnDark(44)}</div>
@@ -580,6 +654,10 @@ function Plans(){
     </div>
   </div>`;
 }
+async function loadPlans(){
+  if(S.plans) return;
+  try{ const result=await api('/plans'); setState({plans:result.plans}); }catch(err){ /* keep fallback plans */ }
+}
 
 /* ==========================================================  SCREEN — PAYMENT  */
 function Payment(){
@@ -601,14 +679,27 @@ function Payment(){
     <div style="display:flex;align-items:center;justify-content:center;gap:6px"><i class="ti ti-shield-check" style="color:var(--p);font-size:13px"></i><span class="cap">256-bit SSL &middot; PCI DSS &middot; NDPR-compliant</span></div>
   </div></div>`;
 }
-function cPay(){ go('questionnaire'); setTimeout(()=>setState({modal:'pay_ok'}),60); }
+async function cPay(){
+  if(!requireAuth('payment')) return;
+  const plan = (S.plans||[]).find(p=>p.slug===S.plan || p.id===S.plan);
+  const price = plan?.price || ({starter:15000,pro:35000,premium:65000}[S.plan]);
+  setState({loading:true,error:null});
+  try{
+    const sub = await api('/subscription',{method:'POST',body:JSON.stringify({plan:S.plan})});
+    const pay = await api('/payment/initiate',{method:'POST',body:JSON.stringify({type:'subscription',subscriptionId:sub.subscription.id,amount:price,currency:'NGN',channel:S.payMethod})});
+    await api('/payment/verify',{method:'POST',body:JSON.stringify({reference:pay.reference,status:'paid'})});
+    setState({loading:false,subscription:sub.subscription});
+    go('questionnaire');
+    setTimeout(()=>setState({modal:'pay_ok'}),60);
+  }catch(err){ toastError(err); }
+}
 
 /* ==========================================================  SCREEN — QUESTIONNAIRE  */
 function Questionnaire(){
   const q=S.qStep;
   const secs=[{t:'Current Health',s:'Metabolic baseline &amp; goals'},{t:'Medical History',s:'Past &amp; present conditions'},{t:'Medications &amp; Allergies',s:'Current treatments'},{t:'Lifestyle Profile',s:'Habits, sleep &amp; stress'},{t:'Doctor Review Consent',s:'Finalise &amp; submit'}];
   const c=[
-    `<div class="g2"><div class="fi"><label class="fl">Weight (kg)</label><input class="inp" type="number" value="98"></div><div class="fi"><label class="fl">Height (cm)</label><input class="inp" type="number" value="165"></div></div><div class="cteal" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--navy)">Calculated BMI</span><span class="badge bwarn">36.0 — Obese</span></div><div class="prog plg" style="margin-bottom:7px"><div class="pf" style="width:72%;background:var(--warn)"></div></div><p style="font-size:12px;color:var(--p);margin:0">BMI &#8805; 30 qualifies you for medical evaluation.</p></div><div class="fi"><label class="fl">Primary Goal</label><select class="inp"><option>Lose weight &amp; improve metabolic markers</option><option>Increase energy &amp; focus</option><option>Better blood sugar control</option><option>All of the above</option></select></div><div class="fi"><label class="fl">Previous attempts</label><select class="inp"><option>Yes, diet &amp; exercise only</option><option>Yes, with medications</option><option>Yes, bariatric surgery</option><option>No previous attempts</option></select></div>`,
+    `<div class="g2"><div class="fi"><label class="fl">Weight (kg)</label><input class="inp" id="q-weight" type="number" value="98"></div><div class="fi"><label class="fl">Height (cm)</label><input class="inp" id="q-height" type="number" value="165"></div></div><div class="cteal" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:13px;font-weight:700;color:var(--navy)">Calculated BMI</span><span class="badge bwarn">36.0 — Obese</span></div><div class="prog plg" style="margin-bottom:7px"><div class="pf" style="width:72%;background:var(--warn)"></div></div><p style="font-size:12px;color:var(--p);margin:0">BMI &#8805; 30 qualifies you for medical evaluation.</p></div><div class="fi"><label class="fl">Primary Goal</label><select class="inp" id="q-goal"><option>Lose weight &amp; improve metabolic markers</option><option>Increase energy &amp; focus</option><option>Better blood sugar control</option><option>All of the above</option></select></div><div class="fi"><label class="fl">Previous attempts</label><select class="inp"><option>Yes, diet &amp; exercise only</option><option>Yes, with medications</option><option>Yes, bariatric surgery</option><option>No previous attempts</option></select></div>`,
     `${[['Type 2 Diabetes or pre-diabetes','D'],['High blood pressure (Hypertension)','H'],['Thyroid disease','T'],['Kidney or liver disease','K'],['Pancreatitis history','P'],['Heart disease or stroke','C']].map(([q2,n])=>`<div style="background:var(--bga);border-radius:var(--rmd);padding:13px;margin-bottom:10px"><div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:9px">${q2}</div><div style="display:flex;gap:8px">${['Yes','No'].map((t,i)=>`<label style="flex:1;display:flex;align-items:center;gap:6px;background:var(--bgc);border:1.5px solid var(--gray);border-radius:8px;padding:9px 12px;cursor:pointer"><input type="radio" name="${n}" ${i===1?'checked':''} style="accent-color:var(--p)"> <span style="font-size:13px">${t}</span></label>`).join('')}</div></div>`).join('')}`,
     `<div class="fi"><label class="fl">Current Medications</label><textarea class="inp" rows="3" placeholder="Names and dosages..."></textarea></div><div class="fi"><label class="fl">Known Allergies</label><textarea class="inp" rows="2" placeholder="Drug, food, or environmental..."></textarea></div><div class="fi"><label class="fl">Previous Weight Loss Meds</label><select class="inp"><option>None</option><option>Orlistat</option><option>Phentermine</option><option>GLP-1 (Ozempic/Wegovy/Saxenda)</option><option>Other</option></select></div><div style="background:var(--bga);border-radius:var(--rmd);padding:13px"><div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:9px">Pregnancy / Breastfeeding status</div><div style="display:flex;gap:7px">${['Pregnant','Breastfeeding','Neither / N/A'].map((t,i)=>`<label style="flex:1;display:flex;align-items:center;gap:5px;background:var(--bgc);border:1.5px solid var(--gray);border-radius:8px;padding:9px 8px;cursor:pointer;font-size:11px"><input type="radio" name="preg" ${i===2?'checked':''} style="accent-color:var(--p)"> ${t}</label>`).join('')}</div></div>`,
     `<div class="fi"><label class="fl">Exercise frequency</label><select class="inp"><option>Sedentary</option><option>1-2x/week</option><option>3-4x/week</option><option>5+/week</option></select></div><div class="fi"><label class="fl">Eating pattern</label><select class="inp"><option selected>Mixed / no specific diet</option><option>High carbohydrate</option><option>Low carb / Keto</option><option>Vegetarian</option><option>Vegan</option></select></div><div class="fi"><label class="fl">Daily water intake</label><select class="inp"><option>Less than 1 litre</option><option selected>1-2 litres</option><option>2-3 litres</option><option>3+ litres</option></select></div><div class="fi"><label class="fl">Average sleep</label><select class="inp"><option selected>Less than 6 hours</option><option>6-7 hours</option><option>7-8 hours</option><option>8+ hours</option></select></div><div class="fi"><label class="fl">Stress level</label><select class="inp"><option>Low</option><option selected>Moderate</option><option>High</option><option>Very high</option></select></div>`,
@@ -629,17 +720,39 @@ function Questionnaire(){
     </div>
   </div>`;
 }
-function finishQ(){ go('dashboard'); document.getElementById('bottom-nav').style.display='flex'; }
+async function finishQ(){
+  if(!requireAuth('questionnaire')) return;
+  setState({loading:true,error:null});
+  try{
+    await api('/questionnaire',{method:'POST',body:JSON.stringify({
+      heightCm:Number(document.getElementById('q-height')?.value || 165),
+      weightKg:Number(document.getElementById('q-weight')?.value || 98),
+      goals:[document.getElementById('q-goal')?.value || 'Lose weight and improve metabolic markers'],
+      conditions:['To be reviewed by doctor'],
+      medications:['Submitted in intake'],
+      allergies:['Submitted in intake']
+    })});
+    setState({loading:false,qStep:0});
+    go('dashboard');
+    document.getElementById('bottom-nav').style.display='flex';
+  }catch(err){ toastError(err); }
+}
 
 /* ==========================================================  SCREEN — DASHBOARD  */
 function Dashboard(){
+  const name = S.user?.name || 'Amara Okafor';
+  const initials = name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase() || 'AO';
+  const weights = S.progress?.weights || [];
+  const currentWeight = weights.at(-1)?.kg || 94.5;
+  const startWeight = weights[0]?.kg || 98;
+  const lost = Math.max(0, +(startWeight-currentWeight).toFixed(1));
   return `<div>
     <div style="background:var(--bgc);padding:16px 19px;border-bottom:1px solid var(--gray)">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <div><div style="font-size:11px;color:var(--nl);margin-bottom:2px">Good morning &#128075;</div><div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:800;color:var(--navy)">Amara Okafor</div></div>
+        <div><div style="font-size:11px;color:var(--nl);margin-bottom:2px">Good morning &#128075;</div><div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:800;color:var(--navy)">${safeText(name)}</div></div>
         <div style="display:flex;gap:9px;align-items:center">
           <button onclick="go('notifications')" style="background:var(--pl);border:none;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative"><i class="ti ti-bell" style="color:var(--p);font-size:18px"></i><div class="ndot"></div></button>
-          <div style="width:40px;height:40px;border-radius:50%;background:var(--p);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:14px;font-weight:800;color:#fff">AO</div>
+          <div style="width:40px;height:40px;border-radius:50%;background:var(--p);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:14px;font-weight:800;color:#fff">${initials}</div>
         </div>
       </div>
     </div>
@@ -655,13 +768,13 @@ function Dashboard(){
     </div>
     <div style="padding:0 14px">
       <div class="g2" style="margin-bottom:14px">
-        <div class="stat"><div class="sl">Current Weight</div><div class="sv">94.5 <span style="font-size:13px;color:var(--nl)">kg</span></div><div class="sc dn">&#8722;3.5 kg this month</div></div>
+        <div class="stat"><div class="sl">Current Weight</div><div class="sv">${currentWeight} <span style="font-size:13px;color:var(--nl)">kg</span></div><div class="sc dn">&#8722;${lost} kg this month</div></div>
         <div class="stat"><div class="sl">Goal Weight</div><div class="sv">73 <span style="font-size:13px;color:var(--nl)">kg</span></div><div class="sc" style="color:var(--nl)">21.5 kg away</div></div>
         <div class="stat"><div class="sl">BMI</div><div class="sv">34.7</div><span class="badge bwarn" style="margin-top:5px">Obese I</span></div>
         <div class="stat"><div class="sl">Days on Plan</div><div class="sv">23</div><div class="sc up">Streak! &#128293;</div></div>
       </div>
       <div class="card" style="margin-bottom:14px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3>Metabolic Progress</h3><span class="badge bok">&#8722;3.5 kg total</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3>Metabolic Progress</h3><span class="badge bok">&#8722;${lost} kg total</span></div>
         <div style="display:flex;align-items:flex-end;gap:5px;height:72px">
           ${[98,97.2,96.8,96,95.5,94.5].map((w,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:100%;background:${i===5?'var(--p)':'var(--pl)'};border-radius:3px 3px 0 0;height:${Math.round((w-93)/(98-93)*58+7)}px"></div><div style="font-size:9px;color:var(--nl)">W${i+1}</div></div>`).join('')}
         </div>
@@ -758,7 +871,15 @@ function Doctor(){
     </div>
   </div>`;
 }
-function sendMsg(){ const i=document.getElementById('chat-input'); if(!i||!i.value.trim())return; setState({chat:[...S.chat,{from:'user',text:i.value.trim(),time:'Now'}]}); }
+async function sendMsg(){
+  const i=document.getElementById('chat-input');
+  if(!i||!i.value.trim())return;
+  const text=i.value.trim();
+  i.value='';
+  setState({chat:[...S.chat,{from:'user',text,time:'Now'}]});
+  try{ await api('/messages',{method:'POST',body:JSON.stringify({toUserId:'usr_doctor',text})}); }
+  catch(err){ toastError(err); }
+}
 
 /* ==========================================================  SCREEN — PHARMACY  */
 function Pharmacy(){
@@ -777,28 +898,37 @@ function Pharmacy(){
 
 /* ==========================================================  SCREEN — PROFILE  */
 function Profile(){
+  const name = S.user?.name || 'Amara Okafor';
+  const email = S.user?.email || 'amara@email.com';
+  const phone = S.user?.phone || '+234 800 123 4567';
+  const initials = name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase() || 'AO';
   return `<div>
     <div class="hg" style="padding:34px 19px 26px;text-align:center">
-      <div style="width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.18);border:2.5px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-family:'Playfair Display',serif;font-size:24px;font-weight:800;color:#fff">AO</div>
-      <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:800;color:#fff">Amara Okafor</div>
-      <div style="font-size:12px;color:rgba(255,255,255,.58);margin-top:2px">amara@email.com &middot; Lagos</div>
+      <div style="width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.18);border:2.5px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-family:'Playfair Display',serif;font-size:24px;font-weight:800;color:#fff">${initials}</div>
+      <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:800;color:#fff">${safeText(name)}</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.58);margin-top:2px">${safeText(email)} &middot; Nigeria</div>
       <div style="display:flex;gap:7px;justify-content:center;margin-top:10px">
         <span class="badge" style="background:rgba(255,255,255,.14);color:rgba(255,255,255,.82);border:1px solid rgba(255,255,255,.18)">Pro Plan</span>
         <span class="badge" style="background:rgba(255,255,255,.14);color:rgba(255,255,255,.82);border:1px solid rgba(255,255,255,.18)">Since Jun 2026</span>
       </div>
     </div>
     <div class="sb">
-      ${[{s:'Account',items:[['ti-user-edit','Edit Profile','Update personal information'],['ti-lock','Change Password','Last changed: never'],['ti-phone','Phone Number','+234 800 123 4567'],['ti-map-pin','Delivery Address','Victoria Island, Lagos']]},{s:'Health &amp; Medical',items:[['ti-clipboard-list','Wellness Questionnaire','View or update responses'],['ti-report-medical','Medical Records','Lab results and documents'],['ti-heart','Emergency Contact','Chidi Okafor &middot; Spouse']]},{s:'Subscription &amp; Billing',items:[['ti-credit-card','Active Subscription','Pro &middot; &#8358;35,000/month'],['ti-receipt','Payment History','Invoices and receipts'],['ti-wallet','Wallet Balance','&#8358;42,500 available'],['ti-arrow-up-circle','Upgrade Plan','Switch to Premium']]},{s:'Notifications &amp; Preferences',items:[['ti-bell','Notification Settings','Wellness alerts &amp; reminders'],['ti-mail','Email Preferences','Weekly updates, reports']]},{s:'Support &amp; Legal',items:[['ti-headset','Contact Support','Chat with our team'],['ti-help-circle','Help &amp; FAQs','Common questions'],['ti-shield','Privacy Policy','NDPR-compliant data handling'],['ti-file-text','Terms of Service','Platform usage terms'],['ti-certificate','Medical Disclaimer','Healthcare legal notices']]}].map(g=>`<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--nl);margin-bottom:8px">${g.s}</div><div class="card" style="padding:0;overflow:hidden;margin-bottom:14px">${g.items.map(([ic,t,s],i)=>`<div style="display:flex;gap:11px;align-items:center;padding:13px 15px;${i<g.items.length-1?'border-bottom:1px solid var(--bga)':''};cursor:pointer"><i class="ti ${ic}" style="color:var(--p);font-size:17px;flex-shrink:0"></i><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--navy)">${t}</div><div class="cap">${s}</div></div><i class="ti ti-chevron-right" style="color:var(--gm);font-size:13px"></i></div>`).join('')}</div>`).join('')}
-      <button class="btn bdr" style="margin-bottom:0" onclick="go('landing')"><i class="ti ti-logout"></i> Sign Out</button>
+      ${[{s:'Account',items:[['ti-user-edit','Edit Profile','Update personal information'],['ti-lock','Change Password','Last changed: never'],['ti-phone','Phone Number',phone],['ti-map-pin','Delivery Address','Victoria Island, Lagos']]},{s:'Health &amp; Medical',items:[['ti-clipboard-list','Wellness Questionnaire','View or update responses'],['ti-report-medical','Medical Records','Lab results and documents'],['ti-heart','Emergency Contact','Chidi Okafor &middot; Spouse']]},{s:'Subscription &amp; Billing',items:[['ti-credit-card','Active Subscription','Pro &middot; &#8358;35,000/month'],['ti-receipt','Payment History','Invoices and receipts'],['ti-wallet','Wallet Balance','&#8358;42,500 available'],['ti-arrow-up-circle','Upgrade Plan','Switch to Premium']]},{s:'Notifications &amp; Preferences',items:[['ti-bell','Notification Settings','Wellness alerts &amp; reminders'],['ti-mail','Email Preferences','Weekly updates, reports']]},{s:'Support &amp; Legal',items:[['ti-headset','Contact Support','Chat with our team'],['ti-help-circle','Help &amp; FAQs','Common questions'],['ti-shield','Privacy Policy','NDPR-compliant data handling'],['ti-file-text','Terms of Service','Platform usage terms'],['ti-certificate','Medical Disclaimer','Healthcare legal notices']]}].map(g=>`<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--nl);margin-bottom:8px">${g.s}</div><div class="card" style="padding:0;overflow:hidden;margin-bottom:14px">${g.items.map(([ic,t,s],i)=>`<div style="display:flex;gap:11px;align-items:center;padding:13px 15px;${i<g.items.length-1?'border-bottom:1px solid var(--bga)':''};cursor:pointer"><i class="ti ${ic}" style="color:var(--p);font-size:17px;flex-shrink:0"></i><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--navy)">${t}</div><div class="cap">${safeText(s)}</div></div><i class="ti ti-chevron-right" style="color:var(--gm);font-size:13px"></i></div>`).join('')}</div>`).join('')}
+      <button class="btn bdr" style="margin-bottom:0" onclick="logout()"><i class="ti ti-logout"></i> Sign Out</button>
     </div>
     <!-- Profile uses the shared dark site footer -->
     ${SiteFooter()}
   </div>`;
 }
+async function logout(){
+  try{ await api('/auth/logout',{method:'POST',body:JSON.stringify({refreshToken:AUTH.refresh})}); }catch(e){}
+  AUTH.clear(); setState({user:null,screen:'landing'}); document.getElementById('bottom-nav').style.display='none';
+}
 
 /* ==========================================================  SCREEN — NOTIFICATIONS  */
 function Notifications(){
-  const ns=[{ic:'ti-stethoscope',bg:'var(--il)',c:'var(--inf)',t:'Dr. Kemi sent you a message',d:'Tap to read the consultation note',time:'2 min ago',u:true},{ic:'ti-clipboard-check',bg:'var(--okl)',c:'var(--ok)',t:'Wellness intake reviewed',d:'Your questionnaire was submitted successfully',time:'1 hr ago',u:true},{ic:'ti-pill',bg:'#EDE9FE',c:'#5B21B6',t:'Prescription update',d:'GLP-1 eligibility screening is in progress',time:'3 hrs ago',u:false},{ic:'ti-credit-card',bg:'var(--cl)',c:'var(--cd)',t:'Payment successful',d:'&#8358;35,000 charged &middot; Pro Plan &middot; Receipt emailed',time:'Yesterday',u:false},{ic:'ti-trending-down',bg:'var(--okl)',c:'var(--ok)',t:'Wellness milestone!',d:'You have lost 3.5 kg — excellent progress!',time:'6 July',u:false}];
+  const fallback=[{ic:'ti-stethoscope',bg:'var(--il)',c:'var(--inf)',t:'Dr. Kemi sent you a message',d:'Tap to read the consultation note',time:'2 min ago',u:true},{ic:'ti-clipboard-check',bg:'var(--okl)',c:'var(--ok)',t:'Wellness intake reviewed',d:'Your questionnaire was submitted successfully',time:'1 hr ago',u:true},{ic:'ti-pill',bg:'#EDE9FE',c:'#5B21B6',t:'Prescription update',d:'GLP-1 eligibility screening is in progress',time:'3 hrs ago',u:false}];
+  const ns=(S.notifications?.length?S.notifications.map(n=>({ic:'ti-bell',bg:'var(--il)',c:'var(--inf)',t:n.title,d:n.body,time:new Date(n.createdAt).toLocaleString(),u:!n.read})):fallback);
   return `<div>${TopBar('Notifications','dashboard')}<div style="padding:0 19px"><div style="height:8px"></div>${ns.map(n=>`<div style="display:flex;gap:11px;align-items:flex-start;padding:13px 0;border-bottom:1px solid var(--bga);cursor:pointer"><div style="width:40px;height:40px;border-radius:11px;background:${n.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${n.ic}" style="color:${n.c};font-size:19px"></i></div><div style="flex:1"><div style="font-size:13px;font-weight:${n.u?700:600};color:var(--navy);margin-bottom:1px">${n.t}</div><div class="cap">${n.d}</div><div style="font-size:9px;color:var(--nl);margin-top:3px">${n.time}</div></div>${n.u?`<div style="width:8px;height:8px;border-radius:50%;background:var(--coral);flex-shrink:0;margin-top:5px;border:1.5px solid var(--bgc)"></div>`:''}</div>`).join('')}<div style="height:24px"></div></div></div>`;
 }
 
@@ -844,7 +974,11 @@ function render(){
   renderModal();
 }
 
-document.addEventListener('DOMContentLoaded',()=>{ render(); document.getElementById('bottom-nav').style.display='none'; });
+document.addEventListener('DOMContentLoaded',async ()=>{
+  await hydrateApp();
+  render();
+  document.getElementById('bottom-nav').style.display=AUTH.access && WITH_NAV.includes(S.screen) ? 'flex' : 'none';
+});
 </script>
 </body>
 </html>
