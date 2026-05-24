@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "postman:push": "node scripts/push-postman.js",
     "test": "echo 'No tests yet' && exit 0"
   },
   "engines": {
