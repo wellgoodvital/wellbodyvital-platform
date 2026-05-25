@@ -343,6 +343,7 @@ tr:last-child td { border-bottom:0; }
     <button class="nav-btn" data-view="users" data-roles="super_admin,operations"><i class="ti ti-users"></i> Users</button>
     <button class="nav-btn" data-view="verification" data-roles="super_admin,operations"><i class="ti ti-shield-check"></i> Verification</button>
     <button class="nav-btn" data-view="subscriptions" data-roles="super_admin,operations"><i class="ti ti-credit-card"></i> Subscriptions</button>
+    <button class="nav-btn" data-view="promotions" data-roles="super_admin,operations"><i class="ti ti-discount-2"></i> Referrals & Promo</button>
     <button class="nav-btn" data-view="care"><i class="ti ti-stethoscope"></i> Care Review</button>
     <button class="nav-btn" data-view="pharmacy"><i class="ti ti-pill"></i> Pharmacy Ops</button>
     <button class="nav-btn" data-view="payments" data-roles="super_admin,operations"><i class="ti ti-wallet"></i> Payments & Payouts</button>
@@ -382,6 +383,7 @@ const titles = {
   users: ['Users', 'Patients, admins, doctors, and pharmacies'],
   verification: ['Verification', 'Credential review and provider activation'],
   subscriptions: ['Subscriptions', 'Plans, pricing, renewals, and failed payments'],
+  promotions: ['Referrals & Promo', 'Discount codes, referral links, and rewards'],
   care: ['Care Review', 'Intake, medical decisions, messages, prescriptions'],
   pharmacy: ['Pharmacy Ops', 'Inventory, cold chain, fulfillment, refills'],
   payments: ['Payments & Payouts', 'Revenue, consultation fees, pharmacy payouts'],
@@ -611,6 +613,32 @@ function renderSubscriptions() {
     </div>`;
 }
 
+function renderPromotions() {
+  const promos = state.data.promoCodes || [];
+  const referrals = state.data.referrals || [];
+  const userMap = usersById();
+  return `${pageHead(state.user.role === 'super_admin' ? '<button class="btn primary" onclick="createPromo()"><i class="ti ti-plus"></i> Create Promo</button>' : '')}
+    <div class="grid three">
+      ${statCard('Promo Codes', promos.length, 'Active and expired discounts', 'ti-discount-2')}
+      ${statCard('Referrals', referrals.length, 'Customer invite tracking', 'ti-user-plus')}
+      ${statCard('Referral Rewards', formatNaira(referrals.reduce((s, ref) => s + (ref.status === 'qualified' ? ref.rewardAmount : 0), 0)), 'Qualified earnings', 'ti-cash')}
+    </div>
+    <div class="grid two" style="margin-top:14px">
+      <div class="card">
+        <div class="panel-title"><h3>Promo Codes</h3><span class="badge info">Subscription discounts</span></div>
+        <div class="table-wrap"><table><thead><tr><th>Code</th><th>Discount</th><th>Applies To</th><th>Redemptions</th><th>Status</th></tr></thead><tbody>
+          ${promos.map((promo) => `<tr><td><strong>${promo.code}</strong><br>${promo.description || ''}</td><td>${promo.type === 'percent' ? `${promo.value}%` : formatNaira(promo.value)}</td><td>${(promo.appliesToPlanIds || []).join(', ') || 'All plans'}</td><td>${promo.redemptionCount || 0}${promo.maxRedemptions ? ` / ${promo.maxRedemptions}` : ''}</td><td>${badge(promo.active ? 'active' : 'disabled')}</td></tr>`).join('') || '<tr><td colspan="5">No promo codes yet.</td></tr>'}
+        </tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="panel-title"><h3>Referral Tracking</h3><span class="badge ok">Customer rewards</span></div>
+        <div class="table-wrap"><table><thead><tr><th>Referrer</th><th>Referred Customer</th><th>Code</th><th>Reward</th><th>Status</th></tr></thead><tbody>
+          ${referrals.map((ref) => `<tr><td>${userMap[ref.referrerUserId]?.name || ref.referrerUserId}</td><td>${userMap[ref.referredUserId]?.name || ref.referredUserId}</td><td>${ref.code}</td><td>${formatNaira(ref.rewardAmount)}</td><td>${badge(ref.status)}</td></tr>`).join('') || '<tr><td colspan="5">No referral activity yet.</td></tr>'}
+        </tbody></table></div>
+      </div>
+    </div>`;
+}
+
 function renderCare() {
   const consultations = state.provider?.consultations || state.data.consultations || [];
   const prescriptions = state.provider?.prescriptions || state.data.prescriptions || [];
@@ -758,6 +786,7 @@ function render() {
     users: renderUsers,
     verification: renderVerification,
     subscriptions: renderSubscriptions,
+    promotions: renderPromotions,
     care: renderCare,
     pharmacy: renderPharmacy,
     payments: renderPayments,
@@ -851,6 +880,21 @@ async function saveSettings() {
   });
   toast('Settings saved');
   await refresh();
+}
+
+async function createPromo() {
+  const code = prompt('Promo code');
+  if (!code) return;
+  const value = Number(prompt('Discount percent or amount', '10'));
+  if (!value) return toast('Discount value is required');
+  const type = confirm('Use percentage discount? Cancel for fixed naira discount.') ? 'percent' : 'fixed';
+  await api('/api/admin/promo-codes', {
+    method:'POST',
+    body: JSON.stringify({ code, value, type, description: `${type === 'percent' ? value + '%' : formatNaira(value)} subscription discount` }),
+  });
+  toast('Promo code created');
+  await refresh();
+  render();
 }
 
 function downloadReport() {

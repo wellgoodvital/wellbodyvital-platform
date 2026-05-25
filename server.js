@@ -20,6 +20,8 @@ const ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET || TOKEN_SECRET;
 const ACCESS_TOKEN_TTL_MS = Number(process.env.ACCESS_TOKEN_TTL_MS || 15 * 60 * 1000);
 const REFRESH_TOKEN_TTL_MS = Number(process.env.REFRESH_TOKEN_TTL_MS || 7 * 24 * 60 * 60 * 1000);
 const REFRESH_IDLE_TTL_MS = Number(process.env.REFRESH_IDLE_TTL_MS || 30 * 60 * 1000);
+const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || process.env.URL || `http://localhost:${PORT}`;
+const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || '';
 const rateBuckets = new Map();
 
 app.use(express.json({ limit: '10mb' }));
@@ -66,11 +68,22 @@ function ensureDb() {
 
 function readDb() {
   ensureDb();
-  return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+  const db = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+  return migrateDb(db);
 }
 
 function writeDb(db) {
   fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
+}
+
+function migrateDb(db) {
+  const seeded = seedData();
+  ['promoCodes', 'referrals', 'emailEvents'].forEach((key) => {
+    if (!Array.isArray(db[key])) db[key] = seeded[key] || [];
+  });
+  db.users = (db.users || []).map((user) => ({ ...user, referralCode: user.referralCode || referralCodeFor(user.name || user.email) }));
+  db.settings = { ...seeded.settings, ...(db.settings || {}) };
+  return db;
 }
 
 function publicUser(user) {
@@ -280,6 +293,32 @@ function money(amount) {
   return Number(amount || 0);
 }
 
+function referralCodeFor(name) {
+  const prefix = String(name || 'WBV').replace(/[^a-z0-9]/gi, '').slice(0, 4).toUpperCase() || 'WBV';
+  return `${prefix}${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+}
+
+function referralLinkFor(user) {
+  return `${PUBLIC_BASE_URL.replace(/\/$/, '')}/?ref=${encodeURIComponent(user.referralCode || user.id)}`;
+}
+
+function normalizeCurrency(currency) {
+  const value = String(currency || 'NGN').toUpperCase();
+  return ['NGN', 'USD'].includes(value) ? value : null;
+}
+
+function paymentSubunit(amount) {
+  return Math.round(money(amount) * 100);
+}
+
+function discountAmountFor(code, plan, amount) {
+  if (!code || !plan) return 0;
+  const appliesTo = code.appliesToPlanIds || [];
+  if (appliesTo.length && !appliesTo.includes(plan.id) && !appliesTo.includes(plan.slug)) return 0;
+  if (code.type === 'percent') return Math.min(amount, Math.round((amount * money(code.value)) / 100));
+  return Math.min(amount, money(code.value));
+}
+
 function summaryStats(db) {
   const successfulPayments = db.payments.filter((payment) => payment.status === 'paid');
   const revenue = successfulPayments.reduce((sum, payment) => sum + money(payment.amount), 0);
@@ -315,12 +354,12 @@ function questionnaireForResponse(questionnaire) {
 function seedData() {
   const createdAt = now();
   const users = [
-    { id: 'usr_super', role: 'super_admin', name: 'Ade WellBody', email: 'super@wellbodyvital.com', phone: '+2348000000001', country: 'Nigeria', status: 'active', passwordHash: passwordHash('password123'), createdAt },
-    { id: 'usr_ops', role: 'operations', name: 'Operations Lead', email: 'ops@wellbodyvital.com', phone: '+2348000000002', country: 'Nigeria', status: 'active', passwordHash: passwordHash('password123'), createdAt },
-    { id: 'usr_doctor', role: 'doctor', name: 'Dr. Kemi Adeyemi', email: 'doctor@wellbodyvital.com', phone: '+2348000000003', country: 'Nigeria', status: 'pending_verification', passwordHash: passwordHash('password123'), createdAt },
-    { id: 'usr_pharmacy', role: 'pharmacy', name: 'MedPlus Lekki Pharmacy', email: 'pharmacy@wellbodyvital.com', phone: '+2348000000004', country: 'Nigeria', status: 'pending_verification', passwordHash: passwordHash('password123'), createdAt },
-    { id: 'usr_patient', role: 'patient', name: 'Amara Okafor', email: 'patient@wellbodyvital.com', phone: '+2348000000005', country: 'Nigeria', status: 'active', passwordHash: passwordHash('password123'), createdAt },
-    { id: 'usr_patient2', role: 'patient', name: 'Tunde Balogun', email: 'tunde@example.com', phone: '+2348000000006', country: 'Nigeria', status: 'active', passwordHash: passwordHash('password123'), createdAt },
+    { id: 'usr_super', role: 'super_admin', name: 'Ade WellBody', email: 'super@wellbodyvital.com', phone: '+2348000000001', country: 'Nigeria', status: 'active', referralCode: 'ADEWBV', passwordHash: passwordHash('password123'), createdAt },
+    { id: 'usr_ops', role: 'operations', name: 'Operations Lead', email: 'ops@wellbodyvital.com', phone: '+2348000000002', country: 'Nigeria', status: 'active', referralCode: 'OPSWBV', passwordHash: passwordHash('password123'), createdAt },
+    { id: 'usr_doctor', role: 'doctor', name: 'Dr. Kemi Adeyemi', email: 'doctor@wellbodyvital.com', phone: '+2348000000003', country: 'Nigeria', status: 'pending_verification', referralCode: 'DOCWBV', passwordHash: passwordHash('password123'), createdAt },
+    { id: 'usr_pharmacy', role: 'pharmacy', name: 'MedPlus Lekki Pharmacy', email: 'pharmacy@wellbodyvital.com', phone: '+2348000000004', country: 'Nigeria', status: 'pending_verification', referralCode: 'PHRWBV', passwordHash: passwordHash('password123'), createdAt },
+    { id: 'usr_patient', role: 'patient', name: 'Amara Okafor', email: 'patient@wellbodyvital.com', phone: '+2348000000005', country: 'Nigeria', status: 'active', referralCode: 'AMARA25', passwordHash: passwordHash('password123'), createdAt },
+    { id: 'usr_patient2', role: 'patient', name: 'Tunde Balogun', email: 'tunde@example.com', phone: '+2348000000006', country: 'Nigeria', status: 'active', referralCode: 'TUNDE25', passwordHash: passwordHash('password123'), createdAt },
   ];
 
   const plans = [
@@ -374,6 +413,16 @@ function seedData() {
     notifications: [
       { id: 'note_001', userId: 'usr_patient', type: 'doctor_message', title: 'Dr. Kemi sent you a message', body: 'Tap to read the consultation note.', read: false, createdAt },
     ],
+    promoCodes: [
+      { id: 'promo_001', code: 'WELCOME10', type: 'percent', value: 10, description: '10% off first subscription', appliesToPlanIds: ['plan_starter', 'plan_pro', 'plan_premium'], active: true, maxRedemptions: 500, redemptionCount: 0, startsAt: createdAt, expiresAt: null, createdAt },
+      { id: 'promo_002', code: 'PREMIUM5000', type: 'fixed', value: 5000, description: 'N5,000 Premium discount', appliesToPlanIds: ['plan_premium'], active: true, maxRedemptions: 250, redemptionCount: 0, startsAt: createdAt, expiresAt: null, createdAt },
+    ],
+    referrals: [
+      { id: 'ref_001', referrerUserId: 'usr_patient', referredUserId: 'usr_patient2', code: 'AMARA25', status: 'qualified', rewardAmount: 2500, currency: 'NGN', createdAt, paidAt: null },
+    ],
+    emailEvents: [
+      { id: 'email_001', userId: 'usr_patient', to: 'patient@wellbodyvital.com', template: 'welcome_verification', status: 'queued', provider: 'not_configured', createdAt },
+    ],
     payouts: [
       { id: 'payout_001', recipientUserId: 'usr_doctor', role: 'doctor', amount: 10000, currency: 'NGN', status: 'pending', sourcePaymentIds: ['pay_001'], dueAt: '2026-05-30T09:00:00.000Z', paidAt: null },
       { id: 'payout_002', recipientUserId: 'usr_pharmacy', role: 'pharmacy', amount: 25000, currency: 'NGN', status: 'pending', sourcePaymentIds: [], dueAt: '2026-05-30T09:00:00.000Z', paidAt: null },
@@ -407,6 +456,8 @@ function seedData() {
       ndprRetentionYears: 7,
       supportEmail: 'support@wellbodyvital.com',
       payoutDay: 'Friday',
+      usdExchangeRate: 1500,
+      referralRewardAmount: 2500,
     },
   };
 }
@@ -459,6 +510,8 @@ app.post('/api/auth/register', (req, res) => {
     email: req.body.email,
     phone: req.body.phone || '',
     country: req.body.country || 'Nigeria',
+    referralCode: referralCodeFor(fullName),
+    referredByCode: req.body.referralCode ? String(req.body.referralCode).trim().toUpperCase() : null,
     verificationMethod,
     verificationPriority: verificationMethod === 'sms' ? ['sms'] : verificationMethod === 'whatsapp' ? ['whatsapp', 'sms'] : [verificationMethod],
     emailVerifiedAt: null,
@@ -468,6 +521,41 @@ app.post('/api/auth/register', (req, res) => {
     createdAt: now(),
   };
   db.users.push(user);
+  db.notifications = db.notifications || [];
+  db.emailEvents = db.emailEvents || [];
+  db.referrals = db.referrals || [];
+  db.notifications.unshift({
+    id: id('note'),
+    userId: user.id,
+    type: 'account_created',
+    title: 'Welcome to WellBodyVital',
+    body: 'Your account has been created. Please verify your email address to keep your health record secure.',
+    read: false,
+    createdAt: now(),
+  });
+  db.emailEvents.unshift({
+    id: id('email'),
+    userId: user.id,
+    to: user.email,
+    template: 'welcome_verification',
+    status: 'queued',
+    provider: process.env.EMAIL_PROVIDER || 'not_configured',
+    createdAt: now(),
+  });
+  const referrer = user.referredByCode ? db.users.find((item) => item.referralCode === user.referredByCode) : null;
+  if (referrer && referrer.id !== user.id) {
+    db.referrals.unshift({
+      id: id('ref'),
+      referrerUserId: referrer.id,
+      referredUserId: user.id,
+      code: user.referredByCode,
+      status: 'pending_subscription',
+      rewardAmount: money(db.settings?.referralRewardAmount || 2500),
+      currency: 'NGN',
+      createdAt: now(),
+      paidAt: null,
+    });
+  }
   if (role === 'doctor') {
     db.doctorProfiles.push({
       id: id('doc_prof'),
@@ -498,7 +586,7 @@ app.post('/api/auth/register', (req, res) => {
   }
   audit(db, user, 'register', 'user', user.id, { role });
   writeDb(db);
-  res.status(201).json({ success: true, user: publicUser(user) });
+  res.status(201).json({ success: true, user: publicUser(user), verificationQueued: true, emailQueued: true });
 });
 
 app.post('/api/auth/login', rateLimit('auth:login', 10, 15 * 60 * 1000), (req, res) => {
@@ -604,12 +692,68 @@ app.get('/api/customer/dashboard', auth, allow('patient'), (req, res) => {
     prescriptions,
     orders,
     notifications,
+    settings: {
+      usdExchangeRate: money(req.db.settings?.usdExchangeRate || 1500),
+      referralRewardAmount: money(req.db.settings?.referralRewardAmount || 2500),
+    },
   });
 });
 
 app.get('/api/plans', (req, res) => {
   const db = readDb();
   res.json({ plans: db.plans.filter((plan) => plan.status === 'active') });
+});
+
+app.post('/api/address/verify', auth, (req, res) => {
+  const country = String(req.body.country || '').trim();
+  const state = String(req.body.state || '').trim();
+  const address = String(req.body.address || '').trim();
+  const words = address.split(/\s+/).filter(Boolean);
+  const hasNumber = /\d/.test(address);
+  const hasStreetDetail = words.length >= 4 || address.includes(',');
+  const verified = Boolean(country && state && address.length >= 12 && hasNumber && hasStreetDetail);
+  audit(req.db, req.user, 'address_verification_checked', 'user', req.user.id, {
+    country,
+    state,
+    verified,
+    verificationLevel: 'format',
+  });
+  saveAndSend(req, res, {
+    verified,
+    verificationLevel: 'format',
+    message: verified
+      ? 'Address format verified. External geocoding can be connected through the server when provider credentials are added.'
+      : 'Add a house number, street name, area/city, and state so delivery teams can confirm the address.',
+  });
+});
+
+app.post('/api/promo/validate', auth, (req, res) => {
+  req.db.promoCodes = req.db.promoCodes || [];
+  const codeValue = String(req.body.code || '').trim().toUpperCase();
+  const plan = byId(req.db.plans, req.body.planId) || req.db.plans.find((item) => item.slug === req.body.plan);
+  const promo = req.db.promoCodes.find((item) => item.code === codeValue && item.active);
+  if (!promo) return res.status(404).json({ error: 'Promo or referral code was not found' });
+  if (promo.expiresAt && new Date(promo.expiresAt).getTime() < Date.now()) return res.status(400).json({ error: 'Promo code has expired' });
+  if (promo.maxRedemptions && promo.redemptionCount >= promo.maxRedemptions) return res.status(400).json({ error: 'Promo code has reached its redemption limit' });
+  const amount = money(req.body.amount || plan?.price);
+  const discount = discountAmountFor(promo, plan, amount);
+  if (!discount) return res.status(400).json({ error: 'Promo code does not apply to this subscription plan' });
+  audit(req.db, req.user, 'promo_validated', 'promo_code', promo.id, { code: promo.code, planId: plan?.id, discount });
+  saveAndSend(req, res, { valid: true, promo: { ...promo, discountAmount: discount }, discountAmount: discount, finalAmount: Math.max(0, amount - discount) });
+});
+
+app.get('/api/referrals/me', auth, (req, res) => {
+  req.db.referrals = req.db.referrals || [];
+  if (!req.user.referralCode) req.user.referralCode = referralCodeFor(req.user.name);
+  const referrals = req.db.referrals.filter((item) => item.referrerUserId === req.user.id);
+  const earnings = referrals.filter((item) => item.status === 'qualified').reduce((sum, item) => sum + money(item.rewardAmount), 0);
+  saveAndSend(req, res, {
+    code: req.user.referralCode,
+    link: referralLinkFor(req.user),
+    rewardAmount: money(req.db.settings?.referralRewardAmount || 2500),
+    earnings,
+    referrals,
+  });
 });
 
 app.post('/api/subscription', auth, (req, res) => {
@@ -619,7 +763,7 @@ app.post('/api/subscription', auth, (req, res) => {
     id: id('sub'),
     userId: req.user.id,
     planId: plan.id,
-    status: 'active',
+    status: req.body.status === 'pending_payment' ? 'pending_payment' : 'active',
     startedAt: now(),
     nextBillingAt: new Date(Date.now() + 30 * 86400000).toISOString(),
     renewalCount: 0,
@@ -629,10 +773,12 @@ app.post('/api/subscription', auth, (req, res) => {
   saveAndSend(req, res, { success: true, subscription });
 });
 
-app.post('/api/payment/initiate', auth, (req, res) => {
-  const channels = ['card', 'bank', 'paystack', 'flutter', 'wallet'];
+app.post('/api/payment/initiate', auth, async (req, res) => {
+  const channels = ['paystack'];
   if (!isWithin(req.body.amount, 1, 10000000)) return res.status(400).json({ error: 'A valid payment amount is required' });
   if (req.body.channel && !channels.includes(req.body.channel)) return res.status(400).json({ error: 'Unsupported payment channel' });
+  const currency = normalizeCurrency(req.body.currency);
+  if (!currency) return res.status(400).json({ error: 'Currency must be NGN or USD' });
   const reference = `WBV-${Date.now()}`;
   const payment = {
     id: id('pay'),
@@ -640,24 +786,79 @@ app.post('/api/payment/initiate', auth, (req, res) => {
     subscriptionId: req.body.subscriptionId || null,
     type: req.body.type || 'subscription',
     amount: money(req.body.amount),
-    currency: req.body.currency || 'NGN',
+    currency,
     status: 'pending',
-    channel: req.body.channel || 'paystack',
+    channel: 'paystack',
     reference,
+    promoCode: req.body.promoCode || null,
     doctorFee: money(req.body.doctorFee),
     pharmacyFee: money(req.body.pharmacyFee),
     platformCommission: money(req.body.platformCommission),
     createdAt: now(),
   };
   req.db.payments.push(payment);
-  audit(req.db, req.user, 'payment_initiated', 'payment', payment.id, { reference });
-  saveAndSend(req, res, { reference, payment });
+  audit(req.db, req.user, 'payment_initiated', 'payment', payment.id, { reference, currency });
+  if (!PAYSTACK_SECRET_KEY) {
+    saveAndSend(req, res, {
+      reference,
+      payment,
+      checkoutStatus: 'requires_configuration',
+      authorizationUrl: null,
+      message: 'Paystack secret key is not configured on the server. Add PAYSTACK_SECRET_KEY to enable hosted checkout.',
+    });
+    return;
+  }
+  try {
+    const response = await fetch('https://api.paystack.co/transaction/initialize', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: req.user.email,
+        amount: paymentSubunit(payment.amount),
+        currency,
+        reference,
+        callback_url: `${PUBLIC_BASE_URL.replace(/\/$/, '')}/payment-callback`,
+        metadata: {
+          userId: req.user.id,
+          subscriptionId: payment.subscriptionId,
+          paymentId: payment.id,
+          promoCode: payment.promoCode,
+        },
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.status) {
+      payment.providerError = result.message || 'Paystack checkout could not be initialized';
+      saveAndSend(req, res, { reference, payment, checkoutStatus: 'failed', error: payment.providerError }, 502);
+      return;
+    }
+    payment.authorizationUrl = result.data.authorization_url;
+    payment.accessCode = result.data.access_code;
+    payment.provider = 'paystack';
+    saveAndSend(req, res, { reference, payment, checkoutStatus: 'initialized', authorizationUrl: result.data.authorization_url, accessCode: result.data.access_code });
+  } catch (error) {
+    payment.providerError = error.message;
+    saveAndSend(req, res, { reference, payment, checkoutStatus: 'failed', error: 'Payment provider is temporarily unavailable' }, 502);
+  }
 });
 
 app.post('/api/payment/verify', auth, (req, res) => {
   const payment = req.db.payments.find((item) => item.reference === req.body.reference || item.id === req.body.paymentId);
   if (!payment) return res.status(404).json({ error: 'Payment not found' });
   payment.status = req.body.status || 'paid';
+  if (payment.status === 'paid') {
+    const subscription = payment.subscriptionId ? byId(req.db.subscriptions, payment.subscriptionId) : null;
+    if (subscription) subscription.status = 'active';
+    if (payment.promoCode) {
+      const promo = (req.db.promoCodes || []).find((item) => item.code === String(payment.promoCode).toUpperCase());
+      if (promo) promo.redemptionCount = money(promo.redemptionCount) + 1;
+    }
+    const referral = (req.db.referrals || []).find((item) => item.referredUserId === req.user.id && item.status === 'pending_subscription');
+    if (referral) referral.status = 'qualified';
+  }
   audit(req.db, req.user, 'payment_verified', 'payment', payment.id, { status: payment.status });
   saveAndSend(req, res, { verified: payment.status === 'paid', payment });
 });
@@ -802,10 +1003,41 @@ app.get('/api/admin/dashboard', auth, allow('super_admin', 'operations'), (req, 
     supportTickets: req.db.supportTickets,
     auditLogs: req.db.auditLogs.slice(0, 80),
     plans: req.db.plans,
+    promoCodes: req.db.promoCodes || [],
+    referrals: req.db.referrals || [],
     doctorProfiles: req.db.doctorProfiles,
     pharmacyProfiles: req.db.pharmacyProfiles,
     settings: req.db.settings,
   });
+});
+
+app.get('/api/admin/promo-codes', auth, allow('super_admin', 'operations'), (req, res) => {
+  res.json({ promoCodes: req.db.promoCodes || [] });
+});
+
+app.post('/api/admin/promo-codes', auth, allow('super_admin'), (req, res) => {
+  req.db.promoCodes = req.db.promoCodes || [];
+  const codeValue = String(req.body.code || '').trim().toUpperCase();
+  if (!/^[A-Z0-9_-]{4,32}$/.test(codeValue)) return res.status(400).json({ error: 'Promo code must be 4-32 letters, numbers, dashes, or underscores' });
+  if (req.db.promoCodes.some((item) => item.code === codeValue)) return res.status(409).json({ error: 'Promo code already exists' });
+  const promo = {
+    id: id('promo'),
+    code: codeValue,
+    type: req.body.type === 'fixed' ? 'fixed' : 'percent',
+    value: money(req.body.value),
+    description: req.body.description || '',
+    appliesToPlanIds: Array.isArray(req.body.appliesToPlanIds) ? req.body.appliesToPlanIds : [],
+    active: req.body.active !== false,
+    maxRedemptions: req.body.maxRedemptions ? money(req.body.maxRedemptions) : null,
+    redemptionCount: 0,
+    startsAt: req.body.startsAt || now(),
+    expiresAt: req.body.expiresAt || null,
+    createdAt: now(),
+  };
+  if (!promo.value || promo.value < 0) return res.status(400).json({ error: 'A valid discount value is required' });
+  req.db.promoCodes.unshift(promo);
+  audit(req.db, req.user, 'promo_code_created', 'promo_code', promo.id, { code: promo.code });
+  saveAndSend(req, res, { success: true, promo }, 201);
 });
 
 app.get('/api/admin/users', auth, allow('super_admin', 'operations'), (req, res) => {

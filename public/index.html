@@ -353,6 +353,7 @@ input[type=checkbox],input[type=radio] { accent-color:var(--p); margin-top:2px; 
 const S = {
   screen:'landing', plan:'pro', step:0, qStep:0, payMethod:'card', modal:null,
   loading:false, error:null, fileWarning:false, user:null, dashboard:null, subscription:null, plans:null, progress:null, notifications:null,
+  formDraft: JSON.parse(sessionStorage.getItem('wbv_form_draft') || '{}'), promo:null, referral:null, paymentCurrency:'NGN',
   chat:[]
 };
 const WITH_NAV = ['dashboard','progress','doctor','pharmacy','profile','notifications'];
@@ -368,6 +369,34 @@ const AUTH = {
 };
 
 function setState(u){ Object.assign(S,u); render(); }
+function persistDraft(){ sessionStorage.setItem('wbv_form_draft', JSON.stringify(S.formDraft || {})); }
+function draftKey(){ return `${S.screen}:${S.screen==='onboarding'?S.step:S.screen==='questionnaire'?S.qStep:'main'}`; }
+function saveFormDraft(){
+  const root=document.getElementById('screen'); if(!root) return;
+  const data={};
+  root.querySelectorAll('input,select,textarea').forEach(el=>{
+    if(!el.id && !el.name) return;
+    if(el.type==='password') return;
+    const key=el.id || el.name;
+    data[key]=el.type==='checkbox' ? el.checked : el.value;
+  });
+  S.formDraft[draftKey()]=data;
+  persistDraft();
+}
+function restoreFormDraft(){
+  const data=S.formDraft[draftKey()] || {};
+  if(document.getElementById('ob-country') && data['ob-country']){
+    document.getElementById('ob-country').value=data['ob-country'];
+    updateResidenceOptions(false);
+  }
+  Object.entries(data).forEach(([key,value])=>{
+    const el=document.getElementById(key) || document.querySelector(`[name="${String(key).replace(/"/g,'\\"')}"]`);
+    if(!el) return;
+    if(el.type==='checkbox') el.checked=Boolean(value);
+    else el.value=value;
+  });
+  if(document.getElementById('password-strength')) renderPasswordStrength();
+}
 function safeText(v){ return String(v ?? '').replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
 function money(v){ return Number(v||0).toLocaleString('en-NG'); }
 function parseAppDate(v){ return /^\d{4}-\d{2}-\d{2}$/.test(String(v||'')) ? new Date(`${v}T12:00:00`) : new Date(v); }
@@ -389,11 +418,31 @@ function emptyInline(icon,title,body){
 const COUNTRY_DIALS = [
   ['Afghanistan','+93'],['Albania','+355'],['Algeria','+213'],['Andorra','+376'],['Angola','+244'],['Antigua and Barbuda','+1-268'],['Argentina','+54'],['Armenia','+374'],['Australia','+61'],['Austria','+43'],['Azerbaijan','+994'],['Bahamas','+1-242'],['Bahrain','+973'],['Bangladesh','+880'],['Barbados','+1-246'],['Belarus','+375'],['Belgium','+32'],['Belize','+501'],['Benin','+229'],['Bhutan','+975'],['Bolivia','+591'],['Bosnia and Herzegovina','+387'],['Botswana','+267'],['Brazil','+55'],['Brunei','+673'],['Bulgaria','+359'],['Burkina Faso','+226'],['Burundi','+257'],['Cabo Verde','+238'],['Cambodia','+855'],['Cameroon','+237'],['Canada','+1'],['Central African Republic','+236'],['Chad','+235'],['Chile','+56'],['China','+86'],['Colombia','+57'],['Comoros','+269'],['Congo','+242'],['Costa Rica','+506'],["Cote d'Ivoire",'+225'],['Croatia','+385'],['Cuba','+53'],['Cyprus','+357'],['Czechia','+420'],['Democratic Republic of the Congo','+243'],['Denmark','+45'],['Djibouti','+253'],['Dominica','+1-767'],['Dominican Republic','+1-809'],['Ecuador','+593'],['Egypt','+20'],['El Salvador','+503'],['Equatorial Guinea','+240'],['Eritrea','+291'],['Estonia','+372'],['Eswatini','+268'],['Ethiopia','+251'],['Fiji','+679'],['Finland','+358'],['France','+33'],['Gabon','+241'],['Gambia','+220'],['Georgia','+995'],['Germany','+49'],['Ghana','+233'],['Greece','+30'],['Grenada','+1-473'],['Guatemala','+502'],['Guinea','+224'],['Guinea-Bissau','+245'],['Guyana','+592'],['Haiti','+509'],['Honduras','+504'],['Hungary','+36'],['Iceland','+354'],['India','+91'],['Indonesia','+62'],['Iran','+98'],['Iraq','+964'],['Ireland','+353'],['Israel','+972'],['Italy','+39'],['Jamaica','+1-876'],['Japan','+81'],['Jordan','+962'],['Kazakhstan','+7'],['Kenya','+254'],['Kiribati','+686'],['Kuwait','+965'],['Kyrgyzstan','+996'],['Laos','+856'],['Latvia','+371'],['Lebanon','+961'],['Lesotho','+266'],['Liberia','+231'],['Libya','+218'],['Liechtenstein','+423'],['Lithuania','+370'],['Luxembourg','+352'],['Madagascar','+261'],['Malawi','+265'],['Malaysia','+60'],['Maldives','+960'],['Mali','+223'],['Malta','+356'],['Marshall Islands','+692'],['Mauritania','+222'],['Mauritius','+230'],['Mexico','+52'],['Micronesia','+691'],['Moldova','+373'],['Monaco','+377'],['Mongolia','+976'],['Montenegro','+382'],['Morocco','+212'],['Mozambique','+258'],['Myanmar','+95'],['Namibia','+264'],['Nauru','+674'],['Nepal','+977'],['Netherlands','+31'],['New Zealand','+64'],['Nicaragua','+505'],['Niger','+227'],['Nigeria','+234'],['North Korea','+850'],['North Macedonia','+389'],['Norway','+47'],['Oman','+968'],['Pakistan','+92'],['Palau','+680'],['Palestine','+970'],['Panama','+507'],['Papua New Guinea','+675'],['Paraguay','+595'],['Peru','+51'],['Philippines','+63'],['Poland','+48'],['Portugal','+351'],['Qatar','+974'],['Romania','+40'],['Russia','+7'],['Rwanda','+250'],['Saint Kitts and Nevis','+1-869'],['Saint Lucia','+1-758'],['Saint Vincent and the Grenadines','+1-784'],['Samoa','+685'],['San Marino','+378'],['Sao Tome and Principe','+239'],['Saudi Arabia','+966'],['Senegal','+221'],['Serbia','+381'],['Seychelles','+248'],['Sierra Leone','+232'],['Singapore','+65'],['Slovakia','+421'],['Slovenia','+386'],['Solomon Islands','+677'],['Somalia','+252'],['South Africa','+27'],['South Korea','+82'],['South Sudan','+211'],['Spain','+34'],['Sri Lanka','+94'],['Sudan','+249'],['Suriname','+597'],['Sweden','+46'],['Switzerland','+41'],['Syria','+963'],['Taiwan','+886'],['Tajikistan','+992'],['Tanzania','+255'],['Thailand','+66'],['Timor-Leste','+670'],['Togo','+228'],['Tonga','+676'],['Trinidad and Tobago','+1-868'],['Tunisia','+216'],['Turkey','+90'],['Turkmenistan','+993'],['Tuvalu','+688'],['Uganda','+256'],['Ukraine','+380'],['United Arab Emirates','+971'],['United Kingdom','+44'],['United States','+1'],['Uruguay','+598'],['Uzbekistan','+998'],['Vanuatu','+678'],['Vatican City','+379'],['Venezuela','+58'],['Vietnam','+84'],['Yemen','+967'],['Zambia','+260'],['Zimbabwe','+263']
 ].sort((a,b)=>a[0].localeCompare(b[0]));
+const SUBDIVISIONS = {
+  Nigeria:['Abia','Adamawa','Akwa Ibom','Anambra','Bauchi','Bayelsa','Benue','Borno','Cross River','Delta','Ebonyi','Edo','Ekiti','Enugu','FCT - Abuja','Gombe','Imo','Jigawa','Kaduna','Kano','Katsina','Kebbi','Kogi','Kwara','Lagos','Nasarawa','Niger','Ogun','Ondo','Osun','Oyo','Plateau','Rivers','Sokoto','Taraba','Yobe','Zamfara'],
+  Ghana:['Ahafo','Ashanti','Bono','Bono East','Central','Eastern','Greater Accra','North East','Northern','Oti','Savannah','Upper East','Upper West','Volta','Western','Western North'],
+  Kenya:['Baringo','Bomet','Bungoma','Busia','Elgeyo-Marakwet','Embu','Garissa','Homa Bay','Isiolo','Kajiado','Kakamega','Kericho','Kiambu','Kilifi','Kirinyaga','Kisii','Kisumu','Kitui','Kwale','Laikipia','Lamu','Machakos','Makueni','Mandera','Marsabit','Meru','Migori','Mombasa','Muranga','Nairobi','Nakuru','Nandi','Narok','Nyamira','Nyandarua','Nyeri','Samburu','Siaya','Taita-Taveta','Tana River','Tharaka-Nithi','Trans Nzoia','Turkana','Uasin Gishu','Vihiga','Wajir','West Pokot'],
+  'South Africa':['Eastern Cape','Free State','Gauteng','KwaZulu-Natal','Limpopo','Mpumalanga','Northern Cape','North West','Western Cape'],
+  'United States':['Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware','District of Columbia','Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts','Michigan','Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey','New Mexico','New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon','Pennsylvania','Rhode Island','South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont','Virginia','Washington','West Virginia','Wisconsin','Wyoming'],
+  Canada:['Alberta','British Columbia','Manitoba','New Brunswick','Newfoundland and Labrador','Northwest Territories','Nova Scotia','Nunavut','Ontario','Prince Edward Island','Quebec','Saskatchewan','Yukon'],
+  'United Kingdom':['England','Northern Ireland','Scotland','Wales']
+};
 function countryOptions(selected='Nigeria'){
   return COUNTRY_DIALS.map(([name])=>`<option value="${name}" ${name===selected?'selected':''}>${name}</option>`).join('');
 }
 function dialCodeOptions(selected='Nigeria'){
   return COUNTRY_DIALS.map(([name,dial])=>`<option value="${dial}" ${name===selected?'selected':''}>${name} (${dial})</option>`).join('');
+}
+function subdivisionOptions(country='Nigeria', selected=''){
+  const items=SUBDIVISIONS[country] || ['Other / Not listed'];
+  return `<option value="">Select state/region</option>${items.map(name=>`<option value="${name}" ${name===selected?'selected':''}>${name}</option>`).join('')}`;
+}
+function updateResidenceOptions(clear=true){
+  const country=document.getElementById('ob-country')?.value || 'Nigeria';
+  const state=document.getElementById('ob-state');
+  if(!state) return;
+  const prev=clear?'':state.value;
+  state.innerHTML=subdivisionOptions(country, prev);
 }
 function phoneFields(prefix='auth'){
   return `<div class="fi"><label class="fl">Phone Number</label><div style="display:flex;gap:8px"><select class="inp" id="${prefix}-dial" style="width:132px;flex-shrink:0;font-weight:800;color:var(--p)">${dialCodeOptions('Nigeria')}</select><input class="inp" id="${prefix}-phone-local" type="tel" inputmode="tel" placeholder="800 000 0000" style="flex:1"></div></div>`;
@@ -469,19 +518,31 @@ function validateAuth(isLogin){
   return {email,password};
 }
 function validateOnboardingStep(step){
+  saveFormDraft();
   clearFieldErrors();
   clearInlineError();
   if(step===0){
-    requireValue('ob-dob','Date of birth');
+    const dob=requireValue('ob-dob','Date of birth');
+    const ageDate=new Date(dob);
+    const today=new Date();
+    let age=today.getFullYear()-ageDate.getFullYear();
+    const m=today.getMonth()-ageDate.getMonth();
+    if(m<0 || (m===0 && today.getDate()<ageDate.getDate())) age--;
+    if(!dob || Number.isNaN(ageDate.getTime()) || age<18){ markInvalid('ob-dob'); throw new Error('You must be at least 18 years old to use WellBodyVital.'); }
     requireValue('ob-country','Country');
     requireValue('ob-state','State of residence');
     requireValue('ob-address','Delivery address');
+    if(document.getElementById('ob-address-verified')?.value!=='true'){ markInvalid('ob-address'); throw new Error('Please verify your delivery address before continuing.'); }
   }
   if(step===1){
     const height=Number(requireValue('ob-height','Height'));
     const weight=Number(requireValue('ob-weight','Weight'));
-    if(height<90 || height>240) throw new Error('Enter a valid height in centimetres.');
-    if(weight<30 || weight>300) throw new Error('Enter a valid weight in kilograms.');
+    const heightUnit=document.getElementById('ob-height-unit')?.value || 'cm';
+    const weightUnit=document.getElementById('ob-weight-unit')?.value || 'kg';
+    if(heightUnit==='cm' && (height<90 || height>240)) throw new Error('Enter a valid height in centimetres.');
+    if(heightUnit==='in' && (height<35 || height>95)) throw new Error('Enter a valid height in inches.');
+    if(weightUnit==='kg' && (weight<30 || weight>300)) throw new Error('Enter a valid weight in kilograms.');
+    if(weightUnit==='lb' && (weight<66 || weight>660)) throw new Error('Enter a valid weight in pounds.');
   }
   if(step===2){
     requireValue('emergency-name','Emergency contact name');
@@ -495,6 +556,7 @@ function continueOnboarding(){
   catch(err){ toastError(err); }
 }
 function validateQuestionnaireStep(step){
+  saveFormDraft();
   clearFieldErrors();
   clearInlineError();
   if(step===0){
@@ -508,6 +570,21 @@ function validateQuestionnaireStep(step){
 function continueQuestionnaire(){
   try{ validateQuestionnaireStep(S.qStep); setState({qStep:S.qStep+1}); }
   catch(err){ toastError(err); }
+}
+async function verifyAddress(){
+  saveFormDraft();
+  const country=document.getElementById('ob-country')?.value || 'Nigeria';
+  const state=document.getElementById('ob-state')?.value || '';
+  const address=document.getElementById('ob-address')?.value?.trim() || '';
+  if(!address || !state) return toastError(new Error('Enter country, state, and delivery address before verification.'));
+  try{
+    const result=await api('/address/verify',{method:'POST',body:JSON.stringify({country,state,address})});
+    const ok=Boolean(result.verified);
+    document.getElementById('ob-address-verified').value=ok?'true':'false';
+    const box=document.getElementById('address-status');
+    if(box) box.innerHTML=`<span class="badge ${ok?'bok':'bwarn'}">${ok?'Address verified':'Needs review'}</span><div class="cap" style="margin-top:6px">${safeText(result.message || 'Address checked')}</div>`;
+    saveFormDraft();
+  }catch(err){ toastError(err); }
 }
 function api(path, opts={}){
   return fetch(`${API_BASE}${path}`, {
@@ -535,21 +612,23 @@ function requireAuth(next='dashboard'){ if(!AUTH.access){ go('login'); return fa
 async function hydrateApp(){
   if(!AUTH.access) return;
   try{
-    const [me, dashboard, progress, notifications, messages] = await Promise.all([
+    const [me, dashboard, progress, notifications, messages, referral] = await Promise.all([
       api('/auth/me'),
       api('/customer/dashboard').catch(()=>null),
       api('/progress').catch(()=>null),
       api('/notifications').catch(()=>({notifications:[]})),
       api('/messages').catch(()=>({messages:[]})),
+      api('/referrals/me').catch(()=>null),
     ]);
     const assignedDoctorId = dashboard?.consultations?.[0]?.doctorId;
     const chat = (messages.messages||[]).map(m=>({from:m.fromUserId===assignedDoctorId?'doc':'user',text:m.text,time:new Date(m.createdAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}));
-    setState({user:me.user, dashboard, progress, notifications:notifications.notifications||dashboard?.notifications||[], chat:chat.length?chat:[]});
+    setState({user:me.user, dashboard, progress, notifications:notifications.notifications||dashboard?.notifications||[], referral, chat:chat.length?chat:[]});
   }catch(err){ AUTH.clear(); }
 }
 
 /* BUG FIX: always reset modal on navigation */
 function go(s, extra={}){
+  saveFormDraft();
   if(WITH_NAV.includes(s) && !requireAuth(s)) return;
   setState({screen:s, modal:null, ...extra});
   const nav = document.getElementById('bottom-nav');
@@ -728,7 +807,8 @@ async function doAuth(){
       const firstName = document.getElementById('first-name')?.value.trim()||'';
       const lastName = document.getElementById('last-name')?.value.trim()||'';
       const name = `${firstName} ${lastName}`.trim();
-      await api('/auth/register',{method:'POST',body:JSON.stringify({role:'patient',firstName,lastName,name,email,password,phone:composedPhone('auth'),country:document.getElementById('auth-country')?.value || 'Nigeria',verificationMethod:document.getElementById('verification-method')?.value || 'email'})});
+      const referralCode = new URLSearchParams(location.search).get('ref') || '';
+      await api('/auth/register',{method:'POST',body:JSON.stringify({role:'patient',firstName,lastName,name,email,password,phone:composedPhone('auth'),country:document.getElementById('auth-country')?.value || 'Nigeria',verificationMethod:document.getElementById('verification-method')?.value || 'email',referralCode})});
       const result = await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});
       AUTH.set(result); S.user=result.user;
     }
@@ -743,8 +823,8 @@ function Onboarding(){
   const steps=['Personal Details','Body &amp; Goals','Emergency Contact','Health Consent'];
   const s=S.step;
   const c=[
-    `<div class="g2"><div class="fi"><label class="fl">Date of Birth</label><input class="inp" id="ob-dob" type="date"></div><div class="fi"><label class="fl">Gender</label><select class="inp" id="ob-gender"><option value="">Select gender</option><option>Female</option><option>Male</option><option>Non-binary</option><option>Prefer not to say</option></select></div></div><div class="fi"><label class="fl">Country</label><select class="inp" id="ob-country">${countryOptions('Nigeria')}</select></div><div class="fi"><label class="fl">State of Residence</label><select class="inp" id="ob-state"><option value="">Select state</option><option>Lagos</option><option>Abuja (FCT)</option><option>Kano</option><option>Rivers</option><option>Ogun</option><option>Delta</option><option>Anambra</option><option>Oyo</option><option>Enugu</option></select></div><div class="fi"><label class="fl">Delivery Address</label><textarea class="inp" id="ob-address" rows="3" placeholder="Full delivery address for pharmacy orders..."></textarea></div>`,
-    `<div class="g2"><div class="fi"><label class="fl">Height (cm)</label><input class="inp" id="ob-height" type="number" placeholder="165"></div><div class="fi"><label class="fl">Weight (kg)</label><input class="inp" id="ob-weight" type="number" placeholder="98"></div></div><div class="fi"><label class="fl">Wellness Goal</label><select class="inp" id="ob-goal"><option value="">Select goal</option><option>Lose weight &amp; improve metabolic health</option><option>Improve energy &amp; daily vitality</option><option>Manage blood sugar / diabetes risk</option><option>Build healthy long-term habits</option><option>All of the above</option></select></div><div class="fi"><label class="fl">Timeline</label><select class="inp" id="ob-timeline"><option value="">Select timeline</option><option>3 months</option><option>6 months</option><option>12 months</option><option>Ongoing lifestyle change</option></select></div>`,
+    `<div class="g2"><div class="fi"><label class="fl">Date of Birth</label><input class="inp" id="ob-dob" type="date"></div><div class="fi"><label class="fl">Gender</label><select class="inp" id="ob-gender"><option value="">Select gender</option><option>Female</option><option>Male</option><option>Non-binary</option><option>Prefer not to say</option></select></div></div><div class="fi"><label class="fl">Country</label><select class="inp" id="ob-country" onchange="document.getElementById('ob-address-verified').value='false';updateResidenceOptions();saveFormDraft()">${countryOptions('Nigeria')}</select></div><div class="fi"><label class="fl">State / Region of Residence</label><select class="inp" id="ob-state" onchange="document.getElementById('ob-address-verified').value='false'">${subdivisionOptions('Nigeria')}</select></div><div class="fi"><label class="fl">Delivery Address</label><textarea class="inp" id="ob-address" rows="3" placeholder="House number, street, area, city..." oninput="document.getElementById('ob-address-verified').value='false'"></textarea><input type="hidden" id="ob-address-verified" value="false"><button class="btn bgh bsm" style="margin-top:9px;width:auto;padding:0 14px" onclick="verifyAddress()"><i class="ti ti-map-check"></i> Verify Address</button><div id="address-status" style="margin-top:8px"></div></div>`,
+    `<div class="g2"><div class="fi"><label class="fl">Height</label><div style="display:flex;gap:8px"><input class="inp" id="ob-height" type="number" placeholder="165" style="flex:1"><select class="inp" id="ob-height-unit" style="width:92px;flex-shrink:0"><option value="cm">cm</option><option value="in">in</option></select></div></div><div class="fi"><label class="fl">Weight</label><div style="display:flex;gap:8px"><input class="inp" id="ob-weight" type="number" placeholder="98" style="flex:1"><select class="inp" id="ob-weight-unit" style="width:92px;flex-shrink:0"><option value="kg">kg</option><option value="lb">lb</option></select></div></div></div><div class="note nt" style="margin-bottom:14px"><i class="ti ti-ruler-measure" style="color:var(--p);font-size:15px;flex-shrink:0;margin-top:1px"></i><p style="font-size:12px;color:var(--navy);margin:0">Choose the unit you are entering. We convert it securely for clinical review.</p></div><div class="fi"><label class="fl">Wellness Goal</label><select class="inp" id="ob-goal"><option value="">Select goal</option><option>Lose weight &amp; improve metabolic health</option><option>Improve energy &amp; daily vitality</option><option>Manage blood sugar / diabetes risk</option><option>Build healthy long-term habits</option><option>All of the above</option></select></div><div class="fi"><label class="fl">Timeline</label><select class="inp" id="ob-timeline"><option value="">Select timeline</option><option>3 months</option><option>6 months</option><option>12 months</option><option>Ongoing lifestyle change</option></select></div>`,
     `<div class="note nt" style="margin-bottom:14px"><i class="ti ti-heart" style="color:var(--p);font-size:15px;flex-shrink:0;margin-top:1px"></i><p style="font-size:13px;color:var(--navy);margin:0">In a medical emergency, we will contact this person on your behalf immediately.</p></div><div class="fi"><label class="fl">Contact Full Name</label><input class="inp" id="emergency-name" type="text" placeholder="Full name"></div><div class="fi"><label class="fl">Relationship</label><select class="inp" id="emergency-relationship"><option value="">Select relationship</option><option>Spouse</option><option>Parent</option><option>Sibling</option><option>Friend</option></select></div>${phoneFields('emergency')}`,
     `${[['Medical Data Consent','I consent to WellBodyVital collecting and processing my medical data for healthcare delivery under NDPR guidelines.'],['Telehealth Consent','Consultations are conducted remotely via secure video/chat with MDCN-licensed physicians.'],['Privacy Policy','I agree to WellBodyVital\'s Privacy Policy and data handling practices.'],['Terms of Service','I agree to WellBodyVital\'s Terms including subscription, cancellation, and refund policies.'],['Rx Acknowledgement','Prescription decisions (including GLP-1) are made solely by licensed doctors and are not guaranteed.']].map(([t,d])=>`<div class="ropt"><input class="ob-consent" type="checkbox"><div><div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:2px">${t}</div><div style="font-size:12px;color:var(--nm);line-height:1.55">${d}</div></div></div>`).join('')}`
   ];
@@ -757,7 +837,7 @@ function Onboarding(){
     <div style="padding:20px 20px 40px">
       ${c[s]}
       <div style="display:flex;gap:12px;margin-top:10px">
-        ${s>0?`<button class="btn bgh" style="width:auto;padding:0 20px;flex-shrink:0" onclick="setState({step:${s-1}})">&#8592; Back</button>`:''}
+        ${s>0?`<button class="btn bgh" style="width:auto;padding:0 20px;flex-shrink:0" onclick="saveFormDraft();setState({step:${s-1}})">&#8592; Back</button>`:''}
         <button class="btn bp" onclick="${s<3?`continueOnboarding()`:`try{validateOnboardingStep(3);go('plans')}catch(err){toastError(err)}`}">${s<3?'Continue &#8594;':'View Wellness Plans &#8594;'}</button>
       </div>
     </div>
@@ -802,23 +882,41 @@ async function loadPlans(){
 }
 
 /* ==========================================================  SCREEN — PAYMENT  */
+function currencyAmount(plan){
+  const ngn=Number(plan?.price || 0);
+  if(S.paymentCurrency==='USD') return Math.max(1, Math.ceil(ngn / Number(S.dashboard?.settings?.usdExchangeRate || 1500)));
+  return ngn;
+}
+function currencyLabel(amount){
+  return S.paymentCurrency==='USD' ? `$${Number(amount||0).toLocaleString('en-US')}` : `&#8358;${money(amount)}`;
+}
+async function applyPromo(){
+  const code=document.getElementById('promo-code')?.value?.trim();
+  const plan=(S.plans||[]).find(p=>p.slug===S.plan || p.id===S.plan);
+  if(!code) return toastError(new Error('Enter a promo or referral code.'));
+  try{
+    const result=await api('/promo/validate',{method:'POST',body:JSON.stringify({code,planId:plan?.id,plan:plan?.slug,amount:Number(plan?.price||0)})});
+    setState({promo:{code:code.toUpperCase(),discountAmount:Number(result.discountAmount||0)}});
+  }catch(err){ toastError(err); }
+}
 function Payment(){
   const selected = (S.plans||[]).find(p=>p.slug===S.plan || p.id===S.plan);
   const planName = selected?.name || titleCase(S.plan || 'Plan');
-  const planPrice = selected?.price ? money(selected.price) : '--';
-  const methods=[{id:'card',ic:'ti-credit-card',l:'Card Payment'},{id:'bank',ic:'ti-building-bank',l:'Bank Transfer'},{id:'paystack',ic:'ti-brand-stripe',l:'Paystack'},{id:'flutter',ic:'ti-bolt',l:'Flutterwave'},{id:'wallet',ic:'ti-wallet',l:'Wallet'}];
-  const m=S.payMethod;
+  const baseAmount = currencyAmount(selected);
+  const promoDiscountNgn=Number(S.promo?.discountAmount || 0);
+  const discount=S.paymentCurrency==='USD' ? Math.ceil(promoDiscountNgn / Number(S.dashboard?.settings?.usdExchangeRate || 1500)) : promoDiscountNgn;
+  const total=Math.max(0, baseAmount-discount);
   return `<div>${TopBar('Secure Payment','plans')}
   <div class="sb-plain">
-    <div class="cteal" style="margin-bottom:18px"><div style="display:flex;justify-content:space-between;align-items:center"><div><p class="ey" style="margin-bottom:4px">Subscribing to</p><div style="font-family:'Playfair Display',serif;font-size:21px;font-weight:800;color:var(--navy)">${safeText(planName)}</div><div style="font-size:12px;color:var(--p)">Monthly &middot; Cancel anytime</div></div><div style="text-align:right"><div style="font-size:26px;font-weight:800;color:var(--navy)">&#8358;${planPrice}</div><div class="cap">/month</div></div></div></div>
-    <h3 style="margin-bottom:11px">Payment Method</h3>
+    <div class="cteal" style="margin-bottom:18px"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><p class="ey" style="margin-bottom:4px">Subscribing to</p><div style="font-family:'Playfair Display',serif;font-size:21px;font-weight:800;color:var(--navy)">${safeText(planName)}</div><div style="font-size:12px;color:var(--p)">Monthly &middot; Paystack hosted checkout</div></div><div style="text-align:right"><div style="font-size:26px;font-weight:800;color:var(--navy)">${currencyLabel(total)}</div><div class="cap">/month</div></div></div></div>
+    <h3 style="margin-bottom:11px">Payment Currency</h3>
     <div class="g2" style="margin-bottom:18px">
-      ${methods.map(md=>`<div class="ptile ${m===md.id?'on':''}" onclick="setState({payMethod:'${md.id}'})"><i class="ti ${md.ic}" style="font-size:19px;color:${m===md.id?'var(--p)':'var(--nl)'}"></i><span style="font-size:12px;font-weight:600;color:${m===md.id?'var(--p)':'var(--nm)'}">${md.l}</span></div>`).join('')}
+      ${[['NGN','Naira','For Nigerian cards, bank transfer, USSD and local options'],['USD','US Dollar','For dollar card payments where supported by Paystack']].map(([id,label,body])=>`<div class="ptile ${S.paymentCurrency===id?'on':''}" onclick="setState({paymentCurrency:'${id}'})"><i class="ti ti-cash" style="font-size:19px;color:${S.paymentCurrency===id?'var(--p)':'var(--nl)'}"></i><span style="font-size:12px;font-weight:700;color:${S.paymentCurrency===id?'var(--p)':'var(--nm)'}">${label}</span><span class="cap" style="font-size:10px;line-height:1.35;text-align:center">${body}</span></div>`).join('')}
     </div>
-    ${m==='card'?`<div class="note nt" style="margin-bottom:14px"><i class="ti ti-lock" style="color:var(--p);font-size:15px;flex-shrink:0;margin-top:1px"></i><p style="font-size:12px;color:var(--navy);margin:0">Card collection will be handled by the server-side payment gateway checkout. No card API keys are exposed in the browser.</p></div>`:m==='bank'?`<div class="card" style="margin-bottom:14px"><p class="ey" style="margin-bottom:11px">Bank Transfer</p><p class="cap" style="line-height:1.7">A unique transfer reference will be generated by the backend payment middleware when you continue.</p></div>`:m==='paystack'?`<div class="card" style="text-align:center;padding:26px;margin-bottom:14px"><i class="ti ti-brand-stripe" style="font-size:48px;color:#00c3f7;margin-bottom:11px;display:block"></i><h3 style="margin-bottom:7px">Pay with Paystack</h3><p style="font-size:13px">The backend creates the checkout reference securely.</p></div>`:m==='flutter'?`<div class="card" style="text-align:center;padding:26px;margin-bottom:14px"><i class="ti ti-bolt" style="font-size:48px;color:#f5a623;margin-bottom:11px;display:block"></i><h3 style="margin-bottom:7px">Pay with Flutterwave</h3><p style="font-size:13px">The backend creates the checkout reference securely.</p></div>`:`<div class="cteal" style="margin-bottom:14px"><p class="ey" style="margin-bottom:4px">Wallet</p><div style="font-size:16px;font-weight:800;color:var(--navy)">Wallet payments will sync from the payments API.</div></div>`}
-    <div style="display:flex;gap:8px;margin-bottom:18px"><input class="inp" placeholder="Promo / referral code" style="flex:1"><button class="btn bgh bsm" style="width:auto;padding:0 14px;flex-shrink:0">Apply</button></div>
-    <div class="card" style="margin-bottom:18px"><p class="ey" style="margin-bottom:11px">Order Summary</p>${[[`${planName}`,`&#8358;${planPrice}`],['Platform Fee','&#8358;0'],['Discount','&#8358;0']].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:6px 0"><span style="font-size:13px;color:var(--nl)">${safeText(k)}</span><span style="font-size:13px;font-weight:600">${v}</span></div>`).join('')}<div class="div"></div><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;font-weight:700;color:var(--navy)">Total Due</span><span style="font-size:22px;font-weight:800;color:var(--p)">&#8358;${planPrice}</span></div></div>
-    <button class="btn bc" style="margin-bottom:11px" onclick="cPay()"><i class="ti ti-lock"></i> Pay Securely &mdash; &#8358;${planPrice}</button>
+    <div class="note nt" style="margin-bottom:14px"><i class="ti ti-lock" style="color:var(--p);font-size:15px;flex-shrink:0;margin-top:1px"></i><p style="font-size:12px;color:var(--navy);margin:0">The browser asks only our backend to initialize payment. Paystack receives the checkout request from the server, so secret keys and payment details are never exposed in the app.</p></div>
+    <div style="display:flex;gap:8px;margin-bottom:18px"><input class="inp" id="promo-code" placeholder="Promo / referral code" value="${safeText(S.promo?.code || '')}" style="flex:1"><button class="btn bgh bsm" style="width:auto;padding:0 14px;flex-shrink:0" onclick="applyPromo()">Apply</button></div>
+    <div class="card" style="margin-bottom:18px"><p class="ey" style="margin-bottom:11px">Order Summary</p>${[[`${planName}`,currencyLabel(baseAmount)],['Platform Fee',currencyLabel(0)],['Discount',`-${currencyLabel(discount)}`]].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:6px 0"><span style="font-size:13px;color:var(--nl)">${safeText(k)}</span><span style="font-size:13px;font-weight:600">${v}</span></div>`).join('')}<div class="div"></div><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:15px;font-weight:700;color:var(--navy)">Total Due</span><span style="font-size:22px;font-weight:800;color:var(--p)">${currencyLabel(total)}</span></div></div>
+    <button class="btn bc" style="margin-bottom:11px" onclick="cPay()"><i class="ti ti-lock"></i> Continue to Paystack &mdash; ${currencyLabel(total)}</button>
     <div style="display:flex;align-items:center;justify-content:center;gap:6px"><i class="ti ti-shield-check" style="color:var(--p);font-size:13px"></i><span class="cap">256-bit SSL &middot; PCI DSS &middot; NDPR-compliant</span></div>
   </div></div>`;
 }
@@ -826,15 +924,13 @@ async function cPay(){
   if(!requireAuth('payment')) return;
   const plan = (S.plans||[]).find(p=>p.slug===S.plan || p.id===S.plan);
   if(!plan) return toastError(new Error('Plans are still loading. Please retry in a moment.'));
-  const price = plan.price;
+  const price = Math.max(0, currencyAmount(plan)-(S.paymentCurrency==='USD' ? Math.ceil(Number(S.promo?.discountAmount || 0) / Number(S.dashboard?.settings?.usdExchangeRate || 1500)) : Number(S.promo?.discountAmount || 0)));
   setState({loading:true,error:null});
   try{
-    const sub = await api('/subscription',{method:'POST',body:JSON.stringify({plan:S.plan})});
-    const pay = await api('/payment/initiate',{method:'POST',body:JSON.stringify({type:'subscription',subscriptionId:sub.subscription.id,amount:price,currency:'NGN',channel:S.payMethod})});
-    await api('/payment/verify',{method:'POST',body:JSON.stringify({reference:pay.reference,status:'paid'})});
-    setState({loading:false,subscription:sub.subscription});
-    go('questionnaire');
-    setTimeout(()=>setState({modal:'pay_ok'}),60);
+    const sub = await api('/subscription',{method:'POST',body:JSON.stringify({plan:S.plan,status:'pending_payment'})});
+    const pay = await api('/payment/initiate',{method:'POST',body:JSON.stringify({type:'subscription',subscriptionId:sub.subscription.id,amount:price,currency:S.paymentCurrency,channel:'paystack',promoCode:S.promo?.code || null})});
+    if(pay.authorizationUrl){ location.href=pay.authorizationUrl; return; }
+    throw new Error(pay.message || 'Secure checkout is not available yet. Please contact support.');
   }catch(err){ toastError(err); }
 }
 
@@ -1085,6 +1181,7 @@ function Profile(){
   const country = S.user?.country || 'Nigeria';
   const plan = currentPlan();
   const sub = currentSubscription();
+  const referral = S.referral;
   const initials = name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase() || 'WV';
   return `<div>
     <div class="hg" style="padding:34px 19px 26px;text-align:center">
@@ -1097,12 +1194,31 @@ function Profile(){
       </div>
     </div>
     <div class="sb">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--nl);margin-bottom:8px">Referral Rewards</div>
+      <div class="cteal" style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:10px">
+          <div><div style="font-size:13px;font-weight:800;color:var(--navy)">Invite friends</div><div class="cap">Earn &#8358;${money(referral?.rewardAmount || S.dashboard?.settings?.referralRewardAmount || 2500)} when a referred customer subscribes.</div></div>
+          <span class="badge bok">&#8358;${money(referral?.earnings || 0)} earned</span>
+        </div>
+        <div style="display:flex;gap:8px"><input class="inp" id="referral-link" value="${safeText(referral?.link || 'Loading referral link...')}" readonly style="flex:1"><button class="btn bgh bsm" style="width:auto;padding:0 12px;flex-shrink:0" onclick="copyReferralLink()"><i class="ti ti-copy"></i></button></div>
+      </div>
       ${[{s:'Account',items:[['ti-user-edit','Edit Profile','Update personal information'],['ti-lock','Change Password','Last changed: never'],['ti-phone','Phone Number',phone],['ti-world','Country',country],['ti-map-pin','Delivery Address',S.dashboard?.orders?.[0]?.deliveryAddress || 'No delivery address on order']]},{s:'Health &amp; Medical',items:[['ti-clipboard-list','Wellness Questionnaire',S.dashboard?.questionnaire?'Submitted for doctor review':'Not submitted'],['ti-report-medical','Medical Records','Upload lab results and documents'],['ti-heart','Emergency Contact','Not provided']]},{s:'Subscription &amp; Billing',items:[['ti-credit-card','Active Subscription',plan?`${plan.name} &middot; &#8358;${money(plan.price)}/month`:'No active subscription'],['ti-receipt','Payment History','Invoices and receipts'],['ti-arrow-up-circle','Upgrade Plan',sub?'Switch or update your plan':'Choose a plan to subscribe']]},{s:'Notifications &amp; Preferences',items:[['ti-bell','Notification Settings','Wellness alerts &amp; reminders'],['ti-mail','Email Preferences','Weekly updates, reports']]},{s:'Support &amp; Legal',items:[['ti-headset','Contact Support','Chat with our team'],['ti-help-circle','Help &amp; FAQs','Common questions'],['ti-shield','Privacy Policy','NDPR-compliant data handling'],['ti-file-text','Terms of Service','Platform usage terms'],['ti-certificate','Medical Disclaimer','Healthcare legal notices']]}].map(g=>`<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--nl);margin-bottom:8px">${g.s}</div><div class="card" style="padding:0;overflow:hidden;margin-bottom:14px">${g.items.map(([ic,t,s],i)=>`<div style="display:flex;gap:11px;align-items:center;padding:13px 15px;${i<g.items.length-1?'border-bottom:1px solid var(--bga)':''};cursor:pointer"><i class="ti ${ic}" style="color:var(--p);font-size:17px;flex-shrink:0"></i><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--navy)">${t}</div><div class="cap">${safeText(s)}</div></div><i class="ti ti-chevron-right" style="color:var(--gm);font-size:13px"></i></div>`).join('')}</div>`).join('')}
       <button class="btn bdr" style="margin-bottom:0" onclick="logout()"><i class="ti ti-logout"></i> Sign Out</button>
     </div>
     <!-- Profile uses the shared dark site footer -->
     ${SiteFooter()}
   </div>`;
+}
+async function copyReferralLink(){
+  const link=document.getElementById('referral-link')?.value || S.referral?.link;
+  if(!link || link.includes('Loading')) return toastError(new Error('Referral link is still loading.'));
+  try{
+    await navigator.clipboard.writeText(link);
+    showInlineError('Referral link copied.');
+  }catch(err){
+    document.getElementById('referral-link')?.select();
+    showInlineError('Referral link selected.');
+  }
 }
 async function logout(){
   try{ await api('/auth/logout',{method:'POST',body:JSON.stringify({refreshToken:AUTH.refresh})}); }catch(e){}
@@ -1175,6 +1291,7 @@ function render(){
   /* Auto-update copyright year — never needs manual editing */
   const yr = new Date().getFullYear();
   document.querySelectorAll('.wbv-year').forEach(el=>el.textContent=yr);
+  restoreFormDraft();
   renderModal();
 }
 
@@ -1185,6 +1302,8 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   }
   await hydrateApp();
   render();
+  document.addEventListener('input', e=>{ if(e.target?.matches?.('input,select,textarea')) saveFormDraft(); });
+  document.addEventListener('change', e=>{ if(e.target?.matches?.('input,select,textarea')) saveFormDraft(); });
   document.getElementById('bottom-nav').style.display=AUTH.access && WITH_NAV.includes(S.screen) ? 'flex' : 'none';
 });
 </script>
