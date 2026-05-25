@@ -408,6 +408,18 @@ function composedPhone(prefix){
 }
 function validEmail(email){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email||'')); }
 function markInvalid(id, invalid=true){ const el=document.getElementById(id); if(el){ el.style.borderColor=invalid?'var(--err)':''; el.setAttribute('aria-invalid', invalid?'true':'false'); } }
+function clearFieldErrors(){ document.querySelectorAll('[aria-invalid="true"]').forEach(el=>{ el.style.borderColor=''; el.setAttribute('aria-invalid','false'); }); }
+function showInlineError(message){
+  S.error = message;
+  let box = document.getElementById('form-error');
+  const html = `<i class="ti ti-alert-circle" style="color:var(--err)"></i><p style="font-size:12px;color:#7F1D1D;margin:0">${safeText(message)}</p>`;
+  if(box){ box.innerHTML = html; box.style.display = 'flex'; }
+  else {
+    const target = document.querySelector('.togrow') || document.querySelector('.topbar') || document.getElementById('screen');
+    if(target?.insertAdjacentHTML) target.insertAdjacentHTML('afterend', `<div id="form-error" class="note nr" style="margin:0 22px 14px">${html}</div>`);
+  }
+}
+function clearInlineError(){ S.error=null; const box=document.getElementById('form-error'); if(box){ box.style.display='none'; box.innerHTML=''; } }
 function requireValue(id,label){
   const value=document.getElementById(id)?.value?.trim();
   markInvalid(id,!value);
@@ -419,13 +431,13 @@ function passwordPolicy(password, context={}){
   const p=String(password||'');
   const lower=p.toLowerCase();
   const issues=[];
-  if(p.length<15) issues.push('Use at least 15 characters.');
+  if(p.length<8) issues.push('Use at least 8 characters.');
   if(p.length>128) issues.push('Use 128 characters or fewer.');
   if(PASSWORD_BLOCKLIST.some(w=>lower.includes(w))) issues.push('Avoid common or easily guessed passwords.');
   if(context.email && lower.includes(String(context.email).split('@')[0].toLowerCase())) issues.push('Do not include your email name.');
   if(context.name && String(context.name).trim().split(/\s+/).some(part=>part.length>2 && lower.includes(part.toLowerCase()))) issues.push('Do not include your name.');
   const variety=[/[a-z]/,/[A-Z]/,/[0-9]/,/[^A-Za-z0-9]/].reduce((n,re)=>n+(re.test(p)?1:0),0);
-  const score=Math.max(0, Math.min(4, (p.length>=15?2:0)+(p.length>=20?1:0)+(variety>=3?1:0)-(issues.length?1:0)));
+  const score=Math.max(0, Math.min(4, (p.length>=8?2:0)+(p.length>=12?1:0)+(variety>=3?1:0)-(issues.length?1:0)));
   return {ok:issues.length===0,score,issues,label:['Very weak','Weak','Fair','Strong','Very strong'][score]};
 }
 function renderPasswordStrength(){
@@ -439,6 +451,8 @@ function renderPasswordStrength(){
   return result;
 }
 function validateAuth(isLogin){
+  clearFieldErrors();
+  clearInlineError();
   const email=requireValue('auth-email','Email address');
   if(!validEmail(email)){ markInvalid('auth-email'); throw new Error('Enter a valid email address.'); }
   const password=requireValue('auth-password','Password');
@@ -455,6 +469,8 @@ function validateAuth(isLogin){
   return {email,password};
 }
 function validateOnboardingStep(step){
+  clearFieldErrors();
+  clearInlineError();
   if(step===0){
     requireValue('ob-dob','Date of birth');
     requireValue('ob-country','Country');
@@ -479,6 +495,8 @@ function continueOnboarding(){
   catch(err){ toastError(err); }
 }
 function validateQuestionnaireStep(step){
+  clearFieldErrors();
+  clearInlineError();
   if(step===0){
     const weight=Number(requireValue('q-weight','Weight'));
     const height=Number(requireValue('q-height','Height'));
@@ -507,7 +525,12 @@ function api(path, opts={}){
     return body;
   });
 }
-function toastError(err){ setState({error:err.message || String(err), loading:false}); setTimeout(()=>setState({error:null}),3200); }
+function toastError(err){
+  const message = err.message || String(err);
+  S.loading = false;
+  showInlineError(message);
+  setTimeout(()=>{ if(S.error===message) clearInlineError(); },5000);
+}
 function requireAuth(next='dashboard'){ if(!AUTH.access){ go('login'); return false; } return true; }
 async function hydrateApp(){
   if(!AUTH.access) return;
@@ -677,7 +700,7 @@ function Auth(){
       ${!isL?`<div class="g2"><div class="fi"><label class="fl">First Name</label><input class="inp" id="first-name" type="text" placeholder="First name"></div><div class="fi"><label class="fl">Last Name</label><input class="inp" id="last-name" type="text" placeholder="Last name"></div></div>`:''}
       <div class="fi"><label class="fl">Email Address</label><div class="iw"><i class="ti ti-mail ii"></i><input class="inp" id="auth-email" type="email" placeholder="you@email.com"></div></div>
       ${!isL?`<div class="fi"><label class="fl">Country</label><select class="inp" id="auth-country">${countryOptions('Nigeria')}</select></div>${phoneFields('auth')}`:''}
-      <div class="fi"><label class="fl">Password</label><div class="iw"><i class="ti ti-lock ii"></i><input class="inp" id="auth-password" type="password" placeholder="${isL?'Password':'At least 15 characters'}" oninput="renderPasswordStrength()"></div>${!isL?`<div id="password-strength"></div>`:''}</div>
+      <div class="fi"><label class="fl">Password</label><div class="iw"><i class="ti ti-lock ii"></i><input class="inp" id="auth-password" type="password" placeholder="${isL?'Password':'At least 8 characters'}" oninput="renderPasswordStrength()"></div>${!isL?`<div id="password-strength"></div>`:''}</div>
       ${!isL?`<div class="fi"><label class="fl">Verification Method</label><select class="inp" id="verification-method"><option value="email" selected>Email verification</option><option value="whatsapp">WhatsApp verification</option><option value="sms">SMS fallback</option><option value="auth_app">Authentication app</option></select><div class="cap" style="margin-top:5px;line-height:1.55">Email is the default. For phone verification, WhatsApp is attempted before SMS.</div></div>`:''}
       ${!isL?`<div class="note nt" style="margin-bottom:14px"><label style="display:flex;gap:9px;align-items:flex-start;cursor:pointer;width:100%"><input type="checkbox" id="auth-consent" checked style="margin-top:3px;flex-shrink:0"><span style="font-size:12px;color:var(--navy);line-height:1.6">I agree to WellBodyVital's <strong>Terms of Service</strong> and <strong>Privacy Policy</strong>, and consent to my medical data being handled per NDPR guidelines.</span></label></div>`:''}
       <button class="btn bc" style="margin-bottom:14px" onclick="doAuth()"><i class="ti ti-${S.loading?'loader-2':isL?'login':'heart-plus'}"></i> ${S.loading?'Please wait...':isL?'Log In':'Start My Wellness Journey'}</button>
@@ -695,14 +718,17 @@ async function doAuth(){
   const isLogin = S.screen==='login';
   let email, password;
   try{ ({email,password}=validateAuth(isLogin)); }catch(err){ return toastError(err); }
-  setState({loading:true,error:null});
+  S.loading = true;
+  clearInlineError();
   try{
     if(isLogin){
       const result = await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});
       AUTH.set(result); S.user=result.user;
     }else{
-      const name = `${document.getElementById('first-name')?.value.trim()||''} ${document.getElementById('last-name')?.value.trim()||''}`.trim();
-      await api('/auth/register',{method:'POST',body:JSON.stringify({role:'patient',name,email,password,phone:composedPhone('auth'),country:document.getElementById('auth-country')?.value || 'Nigeria',verificationMethod:document.getElementById('verification-method')?.value || 'email'})});
+      const firstName = document.getElementById('first-name')?.value.trim()||'';
+      const lastName = document.getElementById('last-name')?.value.trim()||'';
+      const name = `${firstName} ${lastName}`.trim();
+      await api('/auth/register',{method:'POST',body:JSON.stringify({role:'patient',firstName,lastName,name,email,password,phone:composedPhone('auth'),country:document.getElementById('auth-country')?.value || 'Nigeria',verificationMethod:document.getElementById('verification-method')?.value || 'email'})});
       const result = await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});
       AUTH.set(result); S.user=result.user;
     }

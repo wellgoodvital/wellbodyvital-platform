@@ -98,7 +98,7 @@ function passwordPolicy(password, context = {}) {
   const value = String(password || '');
   const lower = value.toLowerCase();
   const issues = [];
-  if (value.length < 15) issues.push('Use at least 15 characters.');
+  if (value.length < 8) issues.push('Use at least 8 characters.');
   if (value.length > 128) issues.push('Use 128 characters or fewer.');
   if (PASSWORD_BLOCKLIST.some((word) => lower.includes(word))) issues.push('Avoid common or easily guessed passwords.');
   if (context.email && lower.includes(String(context.email).split('@')[0].toLowerCase())) issues.push('Do not include your email name.');
@@ -444,8 +444,9 @@ app.post('/api/auth/register', (req, res) => {
   const allowedRoles = ['patient', 'doctor', 'pharmacy'];
   if (!allowedRoles.includes(role)) return res.status(400).json({ error: 'Unsupported self-registration role' });
   if (!validateEmail(req.body.email)) return res.status(400).json({ error: 'A valid email address is required' });
-  if (!String(req.body.name || '').trim()) return res.status(400).json({ error: 'Full name is required' });
-  const passwordCheck = passwordPolicy(req.body.password, { email: req.body.email, name: req.body.name });
+  const fullName = String(req.body.name || `${req.body.firstName || ''} ${req.body.lastName || ''}`).trim();
+  if (!fullName) return res.status(400).json({ error: 'Full name is required' });
+  const passwordCheck = passwordPolicy(req.body.password, { email: req.body.email, name: fullName });
   if (!passwordCheck.ok) return res.status(400).json({ error: `Password is not strong enough. ${passwordCheck.issues.join(' ')}` });
   if (db.users.some((user) => user.email.toLowerCase() === String(req.body.email || '').toLowerCase())) {
     return res.status(409).json({ error: 'Email already registered' });
@@ -454,7 +455,7 @@ app.post('/api/auth/register', (req, res) => {
   const user = {
     id: id('usr'),
     role,
-    name: req.body.name || `${req.body.firstName || ''} ${req.body.lastName || ''}`.trim() || 'New User',
+    name: fullName,
     email: req.body.email,
     phone: req.body.phone || '',
     country: req.body.country || 'Nigeria',
